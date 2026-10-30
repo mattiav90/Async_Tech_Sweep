@@ -47,7 +47,6 @@ SIM = os.path.join(REPO, "sim")
 CSV = os.path.join(SIM, "csv")
 WORK = os.path.join(SIM, "work")
 
-TECH_DEFAULT = "generic"
 
 
 def clog2(n):
@@ -262,9 +261,11 @@ def w_xbar_det(p, n):
 
 
 def w_xbar_nd(p, n):
-    # Square only (ports = N x N), so it lines up port-for-port with xbar_det.
+    # xbar_nd gives `ports` (square N x N, to line up with xbar_det);
+    # xbar_nd_io gives inDim x outDim.
     W = p["width"]
-    NI = NO = p["ports"]
+    NI = p.get("inDim", p.get("ports"))
+    NO = p.get("outDim", p.get("ports"))
     SW = clog2(NO)
     drivers = [f"rand_src<{W}, 2463534242, {n}> sa[{NI}];",
                f"(i : {NI} : sa[i].O = a[i];)"]
@@ -355,6 +356,12 @@ MODULES = {
     # The crossbar is the headline sweep: ports x width x (det vs probe).
     "xbar_det":       dict(build=w_xbar_det,       points=grid(width=[4, 8], ports=[2, 4, 6, 8, 12, 16])),
     "xbar_nd":        dict(build=w_xbar_nd,        points=grid(width=[4, 8], ports=[2, 4, 6, 8, 12, 16])),
+    # The same arbitrated crossbar, inputs x outputs swept separately.
+    "xbar_nd_io":     dict(build=w_xbar_nd, points=[
+        dict(width=w, inDim=i, outDim=o)
+        for w in (4, 8)
+        for i, o in ((2, 2), (2, 4), (2, 8), (2, 16),
+                     (4, 4), (4, 8), (4, 16), (4, 32))]),
 }
 
 
@@ -371,6 +378,7 @@ QUICK.update(
     cond_select=pin("cond_select", width=8),
     xbar_det=pin("xbar_det", width=4),
     xbar_nd=pin("xbar_nd", width=4),
+    xbar_nd_io=pin("xbar_nd_io", width=4),
 )
 
 
@@ -571,8 +579,8 @@ def main():
                    help="write the per-point work dirs + sim/work/points.mk")
     c = sub.add_parser("collect", parents=[common],
                        help="parse the work dirs into sim/csv/<module>.csv")
-    c.add_argument("--tech", default=TECH_DEFAULT,
-                   help="technology recorded in the CSV")
+    c.add_argument("--tech", default="generic",
+                   help="technology name recorded in the CSV (the TECH it ran with)")
     args = ap.parse_args()
 
     os.makedirs(WORK, exist_ok=True)

@@ -54,6 +54,7 @@ PLOT_SPEC = {
     # det_merge / non_det_merge have no plot of their own: they share merge.png.
     "xbar_det":      dict(x="ports", series="width"),
     "xbar_nd":       dict(x="ports", series="width"),
+    "xbar_nd_io":    dict(x="outDim", series="inDim", facet="width"),
 }
 
 XLABEL = {

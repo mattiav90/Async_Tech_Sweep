@@ -1,7 +1,7 @@
 module,tech,status,width,depth,ports,inDim,outDim,variant,mode,inputs_per_source,ops,tokens,total_delay_ps,delay_per_op_ps,dynamic_energy_fJ,energy_per_op_fJ,leakage_power_W,leakage_energy_fJ,total_energy_fJ,actsim_area,synth_backend,synth_s,sim_s
-det_merge,tsmc65,OK,8,,,2,,,,30,30,30,7459,248.63333333333333,510.0,17.0,0.0,0.0,510.0,0.0,genus,0.6,0.1
+det_merge,tsmc65,OK,8,,,2,,,,30,30,30,7459,248.63333333333333,510.0,17.0,0.0,0.0,510.0,0.0,genus,0.5,0.2
 det_merge,tsmc65,OK,8,,,4,,,,30,30,30,8239,274.6333333333333,3600.0,120.0,1e-06,8.238999999999999,3608.239,0.0,genus,0.8,0.1
 det_merge,tsmc65,OK,8,,,6,,,,30,30,30,8149,271.6333333333333,7290.0,243.0,1e-06,8.149,7298.149,0.0,genus,1.1,0.1
 det_merge,tsmc65,OK,8,,,8,,,,30,30,30,8779,292.6333333333333,9240.0,308.0,1e-06,8.779,9248.779,0.0,genus,1.2,0.1
-det_merge,tsmc65,OK,8,,,12,,,,30,30,30,8779,292.6333333333333,12180.0,406.0,2e-06,17.558,12197.558,0.0,genus,1.6,0.1
+det_merge,tsmc65,OK,8,,,12,,,,30,30,30,8779,292.6333333333333,12180.0,406.0,2e-06,17.558,12197.558,0.0,genus,1.7,0.1
 det_merge,tsmc65,OK,8,,,16,,,,30,30,30,8869,295.6333333333333,16980.0,566.0,3e-06,26.607000000000003,17006.607,0.0,genus,2.1,0.1

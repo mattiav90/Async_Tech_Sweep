@@ -22,15 +22,15 @@ SHELL   := /usr/bin/env bash
 
 # Python deps (matplotlib, pandas) live in a repo-local venv, built on demand
 # from requirements.txt. The base is the system /usr/bin/python3.11 on purpose:
-# a venv built on the cluster's module Python cannot find libpython3.10.so
-# unless that module is loaded, so it breaks in editors and batch jobs.
+# it is self-contained, so the venv works in editors and batch jobs without any
+# environment setup.
 VENV      := .venv
 VENV_BASE ?= /usr/bin/python3.11
 PYTHON    ?= $(VENV)/bin/python
 VENV_OK   := $(VENV)/.installed
 
 # Technology config from $ACT_HOME/conf. Only the ones with a synth.conf can be
-# synthesized -- here generic and tsmc65 (`make help` lists them).
+# synthesized (`make help` lists them).
 TECH    ?= generic
 
 # Tokens each source sends, per parameter point. The CSV/plots report totals
@@ -121,7 +121,7 @@ help: # Show this help
 	@echo "  Modules: $(HELP_MODULES)"
 	@echo ""
 	@echo "  Examples:"
-	@echo "    make quick TECH=tsmc65"
+	@echo "    make quick TECH=generic"
 	@echo "    make sweep MODULE=adder"
 	@echo "    make sim/work/adder/width8/sim.done     # rerun one point"
 	@echo ""

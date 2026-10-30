@@ -76,28 +76,23 @@ expensive fork look 4x cheaper.
 
 ---
 
-## Two honest caveats about `-Tgeneric`
+## Two caveats about what synth2 charges
 
-`generic` is the only usable technology on this machine: `sky130` ships no
-`synth.conf`, and `tsmc65` is not installed.
+**1. Energy covers only the mapped expressions.** `decomp_sim.conf` assigns
+each action of the decomposed CHP a delay and an energy, and the energies come
+from the expressions Genus maps (`a+b`, a `SEL` compare, a guard `c = 1`).
+Handshakes, probes and plain data moves have no energy entry, so a module made
+only of those -- `buffer`, `copy`, `non_det_merge` -- reports 0, and
+`cond_adder`'s selection costs exactly one guard comparison. If Genus fails and
+the abc fallback runs, the energy table is all 0; the `synth_backend` column
+says which one ran.
 
-**1. Energy is always 0.** `decomp_sim.conf` comes back with
-`int_table energies 0 0 0 ...` and `real leakage 0.0`, and `energy -v` prints
-`Total: 0 (0 W); area: 0`. The generic config ships no per-cell energy tables,
-and the only logic-synthesis backend available (the built-in `abc` -- `genus`
-and `yosys` are not installed) does not report power back. SPACE's real energy
-numbers all came from `tsmc65` + `genus`.
-
-*The plumbing is correct and untouched* -- `make sweep TECH=tsmc65` on a machine
-with the PDK fills these columns in. `scripts/plot.py` drops the energy panel
-rather than drawing a flat line at zero.
-
-**2. Delay is real, but from dummy constants.** Delays come from `abc` mapping
-expressions onto `osu018_stdcells.lib`, so they scale correctly with width and
-logic depth. But the *handshake* delays around them come from
-`conf/generic/synth.conf`, which labels its own values "these are dummy numbers"
-(`send_delay 40.0`, `recv_delay 40.0`, ...). So **relative** comparisons between
-modules are meaningful; absolute picoseconds are not silicon.
+**2. Handshake delays are the technology's defaults.** Expression delays come
+from the mapped logic, but channel `send`/`recv` and selection delays are the
+constants in `$ACT_HOME/conf/$(TECH)/synth.conf` (`send_delay`, `recv_delay`,
+`sel_delays`, ...). So a probed merge's arbitration is timed by those defaults,
+not by a modelled arbiter. Relative comparisons between modules are meaningful;
+absolute picoseconds are only as good as that table.
 
 ---
 
@@ -118,6 +113,7 @@ All are in `src/`, all templated on at least `width`.
 | `cond_select` | width, variant, mode | what a CHP `[ c=1 -> OUT!a+b [] else -> skip ]` costs |
 | `xbar_det` | width, ports | crossbar, split + `det_merge`, no arbitration |
 | `xbar_nd` | width, ports | crossbar, split + **probed** `non_det_merge` |
+| `xbar_nd_io` | width, inDim, outDim | the same crossbar, inputs x outputs swept separately (2x2 .. 2x16, 4x4 .. 4x32) |
 
 ### The crossbar's two types
 

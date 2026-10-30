@@ -6,11 +6,8 @@ Everything this reads is produced by the flow in sweep.py:
 
   energy.txt     written by actsim's `energy -v energy.txt`. One line:
                      Total: <dynamic_fJ>  (<leakage_W> W); area: <area>
-                 With a real technology (tsmc65 + genus) these are real
-                 numbers. With -Tgeneric they come back as 0 -- see
-                 README.md -- because the generic config ships no per-cell
-                 energy tables and the only available logic-synthesis
-                 backend (built-in abc) does not report power.
+                 Energy is charged only to the expressions synth2 maps
+                 with Genus (see README.md).
 
   sim.log        actsim stdout. Watched channels print "[ <ps> ] <proc> ..."
                  lines, so the largest timestamp is the time the simulation
