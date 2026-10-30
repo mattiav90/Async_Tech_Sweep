@@ -5,12 +5,11 @@ Plot the sweep results.
 Reads every sim/csv/<module>.csv written by sweep.py and renders:
 
   sim/plots/<module>.png        one panel per metric that actually has data
-  sim/plots/_compare_*.png      cross-module comparisons (the interesting ones)
+  sim/plots/merge.png           det_merge vs non_det_merge, one graph
+  sim/plots/_compare_*.png      other cross-module comparisons
 
-A metric panel is DROPPED, with a note on the figure, when the column is empty
-or all-zero. Under -Tgeneric the energy columns are all zero (see README), so
-you normally get delay only. That is deliberate: a flat line at zero is worse
-than an honest "no data".
+A metric panel is DROPPED only when the column has no numbers at all. All-zero data is drawn as zeros: e.g. synth2 charges no
+energy to a probed merge, and the plot shows that 0 rather than hiding it.
 
 Colours are the first three categorical slots of the data-viz reference palette,
 which are the documented all-pairs-safe subset -- correct here because these are
@@ -52,8 +51,7 @@ PLOT_SPEC = {
     "buffer":        dict(x="depth"),
     "copy":          dict(x="outDim"),
     "split":         dict(x="outDim"),
-    "det_merge":     dict(x="inDim"),
-    "non_det_merge": dict(x="inDim"),
+    # det_merge / non_det_merge have no plot of their own: they share merge.png.
     "xbar_det":      dict(x="ports", series="width"),
     "xbar_nd":       dict(x="ports", series="width"),
 }
@@ -87,8 +85,8 @@ def int_ticks(ax, values):
 
 
 # A panel whose largest value reaches 1000 in one of these units is drawn in
-# the next unit up, so energies read as 2.5 pJ rather than 2,505 fJ.
-UNIT_UP = {"fJ": "pJ"}
+# the next unit up, so it reads 2.5 pJ / 2.59 ns rather than 2,505 fJ / 2,591 ps.
+UNIT_UP = {"fJ": "pJ", "ps": "ns"}
 
 
 def panel_unit(frames, col, unit):
@@ -139,13 +137,17 @@ def label_points(ax, curves):
                         ha=ha, va=va, fontsize=7, color=INK2, zorder=4)
     # Headroom so the outermost labels stay inside the axes.
     ax.margins(y=0.14)
+    # All zeros: matplotlib would centre the axis on 0 with negative ticks.
+    if at and all(y == 0 for ys in at.values() for y in ys):
+        ax.set_ylim(-0.05, 1)
 
 
 def has_data(df, col):
+    """True if the column holds any number. Zeros count: a module synth2 charges
+    no energy (e.g. a probed merge) is drawn at 0, not hidden."""
     if col not in df.columns:
         return False
-    s = pd.to_numeric(df[col], errors="coerce").dropna()
-    return len(s) > 0 and (s != 0).any()
+    return pd.to_numeric(df[col], errors="coerce").notna().any()
 
 
 def draw_panel(ax, df, xcol, metric, label, unit, series_col=None):
@@ -189,7 +191,6 @@ def plot_module(module, df, spec):
     for fv in facets:
         d = df if fv is None else df[df[facet] == fv]
         live = [(c, l, u) for c, l, u in METRICS if has_data(d, c)]
-        missing = [l for c, l, u in METRICS if not has_data(d, c)]
         if not live:
             print(f"  {module}: no metric has data, skipped")
             continue
@@ -203,15 +204,12 @@ def plot_module(module, df, spec):
         name = module if fv is None else f"{module} ({facet}={int(fv)})"
         title = f"{name} - scaling in {d['tech'].iloc[0]} technology"
         fig.suptitle(title, color=INK, fontsize=12, x=0.01, ha="left", y=0.99)
-        if missing:
-            fig.text(0.01, 0.015, "no data: " + ", ".join(missing),
-                     color=INK2, fontsize=8)
         # A legend is mandatory whenever there are >= 2 series.
         h, lab = axes[0].get_legend_handles_labels()
         if len(lab) >= 2:
             fig.legend(h, lab, loc="upper right", frameon=False,
                        fontsize=9, labelcolor=INK2, ncol=len(lab))
-        fig.tight_layout(rect=[0, 0.04, 1, 0.93])
+        fig.tight_layout(rect=[0, 0.02, 1, 0.93])
         out = os.path.join(PLOTS, f"{module}.png" if fv is None
                            else f"{module}_{facet}{int(fv)}.png")
         fig.savefig(out, dpi=150, facecolor=SURFACE)
@@ -220,7 +218,7 @@ def plot_module(module, df, spec):
 
 
 def plot_compare(name, title, frames, xcol, xlabel):
-    """One panel per metric; one line per named data set."""
+    """One panel per metric; one line per named data set -> sim/plots/<name>.png"""
     frames = [(lbl, d) for lbl, d in frames if d is not None and not d.empty]
     if len(frames) < 2:
         return
@@ -251,7 +249,7 @@ def plot_compare(name, title, frames, xcol, xlabel):
     fig.legend(h, lab, loc="upper right", frameon=False, fontsize=9,
                labelcolor=INK2, ncol=len(lab))
     fig.tight_layout(rect=[0, 0.02, 1, 0.93])
-    out = os.path.join(PLOTS, f"_compare_{name}.png")
+    out = os.path.join(PLOTS, f"{name}.png")
     fig.savefig(out, dpi=150, facecolor=SURFACE)
     plt.close(fig)
     print(f"  {out}")
@@ -295,16 +293,11 @@ def plot_cond_select(df):
         style(ax)
     fig.suptitle("Cost of a CHP selection: [ c=1 -> OUT!a+b [] else -> skip ]",
                  color=INK, fontsize=12, x=0.01, ha="left", y=0.99)
-    fig.text(0.01, 0.015,
-             "plain_adder (OUT!a+b, no selection) also consumes CTRL, so vs "
-             "cond_adder(always) the only difference is the [ ] itself. "
-             "always / random / never = a+b path taken 100% / 50% / 0%.",
-             color=INK2, fontsize=8)
     h, lab = axes[0].get_legend_handles_labels()
     if len(lab) >= 2:
         fig.legend(h, lab, loc="upper right", frameon=False, fontsize=9,
                    labelcolor=INK2, ncol=len(lab))
-    fig.tight_layout(rect=[0, 0.05, 1, 0.93])
+    fig.tight_layout(rect=[0, 0.02, 1, 0.93])
     out = os.path.join(PLOTS, "cond_select.png")
     fig.savefig(out, dpi=150, facecolor=SURFACE)
     plt.close(fig)
@@ -340,7 +333,7 @@ def main():
     # --- the two comparisons worth making -----------------------------------
     dm, ndm = load("det_merge"), load("non_det_merge")
     plot_compare(
-        "merge_arbitration",
+        "merge",
         "What arbitration costs: controlled merge vs probed merge",
         [("det_merge (SEL-driven)", dm), ("non_det_merge (probes)", ndm)],
         "inDim", XLABEL["inDim"])
@@ -351,7 +344,7 @@ def main():
         w = sorted(set(xd["width"]) & set(xn["width"]))
         if w:
             plot_compare(
-                "crossbar_det_vs_probe",
+                "_compare_crossbar_det_vs_probe",
                 f"Crossbar scaling, deterministic vs probed (width={int(w[0])})",
                 [("xbar_det", xd[xd["width"] == w[0]]),
                  ("xbar_nd", xn[xn["width"] == w[0]])],

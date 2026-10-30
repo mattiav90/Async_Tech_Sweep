@@ -6,7 +6,7 @@
 # parameters gives you the scaling curve of each block in that technology.
 #
 #   make sweep        # everything (slow: synthesis dominates)
-#   make sweep JOBS=8 # ... running 8 points at once
+#   make sweep JOBS=1 # ... one point at a time (default: 8 at once)
 #   make quick        # every curve, secondary axes pinned to one value
 #   make plot         # render sim/plots/*.png from sim/csv/*.csv
 #   make all          # quick + plot
@@ -33,14 +33,16 @@ VENV_OK   := $(VENV)/.installed
 # synthesized -- here generic and tsmc65 (`make help` lists them).
 TECH    ?= generic
 
-# Tokens generated per source, per parameter point.
+# Tokens each source sends, per parameter point. The CSV/plots report totals
+# divided by the operation count, i.e. the average cost of ONE operation; with
+# a random control (cond_select random) that average includes the activity.
 N       ?= 30
 
 # Per-tool wall-clock limit. Wide multipliers are the slow case.
 TIMEOUT ?= 1800
 
 # Points run in parallel by `make sweep` / `make quick`.
-JOBS    ?= 1
+JOBS    ?= 8
 
 # MODULE=<name> restricts the run to one module (repeat by rerunning).
 MODULE  ?=
@@ -119,7 +121,7 @@ help: # Show this help
 	@echo "  Modules: $(HELP_MODULES)"
 	@echo ""
 	@echo "  Examples:"
-	@echo "    make quick TECH=tsmc65 JOBS=8"
+	@echo "    make quick TECH=tsmc65"
 	@echo "    make sweep MODULE=adder"
 	@echo "    make sim/work/adder/width8/sim.done     # rerun one point"
 	@echo ""

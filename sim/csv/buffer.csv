@@ -1,7 +1,7 @@
-module,tech,status,width,depth,ports,inDim,outDim,variant,mode,inputs_per_source,ops,tokens,total_delay_ps,delay_per_op_ps,dynamic_energy_fJ,energy_per_op_fJ,leakage_power_W,leakage_energy_fJ,total_energy_fJ,area_um2,area_note,actsim_area,dflow_leak_power,synth_backend,synth_s,sim_s
-buffer,tsmc65,OK,8,2,,,,,,30,30,30,3689,122.96666666666667,0.0,0.0,0.0,0.0,0.0,,,0.0,,genus,0.3,0.1
-buffer,tsmc65,OK,8,4,,,,,,30,30,30,3769,125.63333333333334,0.0,0.0,0.0,0.0,0.0,,,0.0,,genus,0.3,0.1
-buffer,tsmc65,OK,8,6,,,,,,30,30,30,3849,128.3,0.0,0.0,0.0,0.0,0.0,,,0.0,,genus,0.4,0.1
-buffer,tsmc65,OK,8,8,,,,,,30,30,30,3929,130.96666666666667,0.0,0.0,0.0,0.0,0.0,,,0.0,,genus,0.4,0.1
-buffer,tsmc65,OK,8,12,,,,,,30,30,30,4089,136.3,0.0,0.0,0.0,0.0,0.0,,,0.0,,genus,0.3,0.1
-buffer,tsmc65,OK,8,16,,,,,,30,30,30,4249,141.63333333333333,0.0,0.0,0.0,0.0,0.0,,,0.0,,genus,0.4,0.1
+module,tech,status,width,depth,ports,inDim,outDim,variant,mode,inputs_per_source,ops,tokens,total_delay_ps,delay_per_op_ps,dynamic_energy_fJ,energy_per_op_fJ,leakage_power_W,leakage_energy_fJ,total_energy_fJ,actsim_area,synth_backend,synth_s,sim_s
+buffer,tsmc65,OK,8,2,,,,,,30,30,30,3689,122.96666666666667,0.0,0.0,0.0,0.0,0.0,0.0,genus,0.2,0.1
+buffer,tsmc65,OK,8,4,,,,,,30,30,30,3769,125.63333333333334,0.0,0.0,0.0,0.0,0.0,0.0,genus,0.2,0.1
+buffer,tsmc65,OK,8,6,,,,,,30,30,30,3849,128.3,0.0,0.0,0.0,0.0,0.0,0.0,genus,0.3,0.1
+buffer,tsmc65,OK,8,8,,,,,,30,30,30,3929,130.96666666666667,0.0,0.0,0.0,0.0,0.0,0.0,genus,0.3,0.1
+buffer,tsmc65,OK,8,12,,,,,,30,30,30,4089,136.3,0.0,0.0,0.0,0.0,0.0,0.0,genus,0.3,0.1
+buffer,tsmc65,OK,8,16,,,,,,30,30,30,4249,141.63333333333333,0.0,0.0,0.0,0.0,0.0,0.0,genus,0.3,0.1

@@ -7,7 +7,7 @@ and sweep its template parameters to get a scaling curve.
 ```bash
 make venv         # one-time: .venv with matplotlib + pandas (other targets do this on demand)
 make quick        # every curve (6 points), secondary axes pinned -- faster check
-make sweep        # the full sweep  -> sim/csv/*.csv  (JOBS=8 to parallelize)
+make sweep        # the full sweep  -> sim/csv/*.csv  (8 points at once; JOBS=1 to serialize)
 make plot         # render           -> sim/plots/*.png
 make help         # targets and variables
 ```
@@ -35,7 +35,7 @@ every tool command lives in the Makefile (the *Tool commands* block).
 
    Each stage logs to `<stage>.log`, its wall time to `<stage>.time`, and
    touches its `.done` file only on success. Points are independent, so
-   `make sweep JOBS=8` runs 8 at once, and a single point can be rerun by hand:
+   `make sweep` runs 8 at once (`JOBS=`), and a single point can be rerun by hand:
    `make sim/work/multiplier/width8/sim.done`.
 
 3. **Collect** -- `sweep.py collect` runs `scripts/extract_metrics.py` on each

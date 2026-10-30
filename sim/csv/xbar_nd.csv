@@ -1,7 +1,7 @@
-module,tech,status,width,depth,ports,inDim,outDim,variant,mode,inputs_per_source,ops,tokens,total_delay_ps,delay_per_op_ps,dynamic_energy_fJ,energy_per_op_fJ,leakage_power_W,leakage_energy_fJ,total_energy_fJ,area_um2,area_note,actsim_area,dflow_leak_power,synth_backend,synth_s,sim_s
-xbar_nd,tsmc65,OK,4,,2,,,,,30,60,60,8368,139.46666666666667,1020.0,17.0,0.0,0.0,1020.0,,,0.0,,genus,1.1,0.1
-xbar_nd,tsmc65,OK,4,,4,,,,,30,120,120,9466,78.88333333333334,14400.0,120.0,4e-06,37.864,14437.864,,,0.0,,genus,1.9,0.1
-xbar_nd,tsmc65,OK,4,,6,,,,,30,180,180,9768,54.266666666666666,43740.0,243.0,6e-06,58.608,43798.608,,,0.0,,genus,2.5,0.1
-xbar_nd,tsmc65,OK,4,,8,,,,,30,240,240,11084,46.18333333333333,73920.0,308.0,8e-06,88.672,74008.672,,,0.0,,genus,3.4,0.1
-xbar_nd,tsmc65,OK,4,,12,,,,,30,360,360,11168,31.022222222222222,146160.0,406.0,2.4e-05,268.032,146428.032,,,0.0,,genus,4.9,0.1
-xbar_nd,tsmc65,OK,4,,16,,,,,30,480,480,11781,24.54375,271680.0,566.0,4.8e-05,565.4879999999999,272245.488,,,0.0,,genus,6.2,0.1
+module,tech,status,width,depth,ports,inDim,outDim,variant,mode,inputs_per_source,ops,tokens,total_delay_ps,delay_per_op_ps,dynamic_energy_fJ,energy_per_op_fJ,leakage_power_W,leakage_energy_fJ,total_energy_fJ,actsim_area,synth_backend,synth_s,sim_s
+xbar_nd,tsmc65,OK,4,,2,,,,,30,60,60,8368,139.46666666666667,1020.0,17.0,0.0,0.0,1020.0,0.0,genus,1.0,0.1
+xbar_nd,tsmc65,OK,4,,4,,,,,30,120,120,9466,78.88333333333334,14400.0,120.0,4e-06,37.864,14437.864,0.0,genus,1.7,0.1
+xbar_nd,tsmc65,OK,4,,6,,,,,30,180,180,9768,54.266666666666666,43740.0,243.0,6e-06,58.608,43798.608,0.0,genus,2.7,0.1
+xbar_nd,tsmc65,OK,4,,8,,,,,30,240,240,11084,46.18333333333333,73920.0,308.0,8e-06,88.672,74008.672,0.0,genus,3.4,0.1
+xbar_nd,tsmc65,OK,4,,12,,,,,30,360,360,11168,31.022222222222222,146160.0,406.0,2.4e-05,268.032,146428.032,0.0,genus,5.2,0.1
+xbar_nd,tsmc65,OK,4,,16,,,,,30,480,480,11781,24.54375,271680.0,566.0,4.8e-05,565.4879999999999,272245.488,0.0,genus,6.3,0.1

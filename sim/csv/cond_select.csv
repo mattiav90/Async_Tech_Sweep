@@ -1,5 +1,5 @@
-module,tech,status,width,depth,ports,inDim,outDim,variant,mode,inputs_per_source,ops,tokens,total_delay_ps,delay_per_op_ps,dynamic_energy_fJ,energy_per_op_fJ,leakage_power_W,leakage_energy_fJ,total_energy_fJ,area_um2,area_note,actsim_area,dflow_leak_power,synth_backend,synth_s,sim_s
-cond_select,tsmc65,OK,8,,,,,cond_adder,always,30,30,30,22913,763.7666666666667,18090.0,603.0,5e-06,114.56500000000001,18204.565,,,0.0,,genus,0.5,0.2
-cond_select,tsmc65,OK,8,,,,,cond_adder,never,30,30,0,4013,133.76666666666668,510.0,17.0,5e-06,20.065,530.065,,,0.0,,genus,0.5,0.1
-cond_select,tsmc65,OK,8,,,,,cond_adder,random,30,30,14,12833,427.76666666666665,8714.0,290.46666666666664,5e-06,64.165,8778.165,,,0.0,,genus,0.6,0.1
-cond_select,tsmc65,OK,8,,,,,plain_adder,always,30,30,30,21503,716.7666666666667,17580.0,586.0,5e-06,107.51500000000001,17687.515,,,0.0,,genus,0.3,0.1
+module,tech,status,width,depth,ports,inDim,outDim,variant,mode,inputs_per_source,ops,tokens,total_delay_ps,delay_per_op_ps,dynamic_energy_fJ,energy_per_op_fJ,leakage_power_W,leakage_energy_fJ,total_energy_fJ,actsim_area,synth_backend,synth_s,sim_s
+cond_select,tsmc65,OK,8,,,,,cond_adder,always,30,30,30,22913,763.7666666666667,18090.0,603.0,5e-06,114.56500000000001,18204.565,0.0,genus,0.6,0.1
+cond_select,tsmc65,OK,8,,,,,cond_adder,never,30,30,0,4013,133.76666666666668,510.0,17.0,5e-06,20.065,530.065,0.0,genus,0.6,0.2
+cond_select,tsmc65,OK,8,,,,,cond_adder,random,30,30,14,12833,427.76666666666665,8714.0,290.46666666666664,5e-06,64.165,8778.165,0.0,genus,0.6,0.1
+cond_select,tsmc65,OK,8,,,,,plain_adder,always,30,30,30,21503,716.7666666666667,17580.0,586.0,5e-06,107.51500000000001,17687.515,0.0,genus,0.4,0.1
