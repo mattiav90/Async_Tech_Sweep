@@ -1,2 +1,0 @@
-synth2 -Tgeneric -o df_dut.act -F dataflow -p dut dut.act
-

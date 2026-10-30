@@ -1,5 +1,0 @@
-watch d.OUT
-cycle
-chcount d.OUT
-energy -v energy.txt
-exit
