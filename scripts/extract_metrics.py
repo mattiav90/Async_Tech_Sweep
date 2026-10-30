@@ -18,10 +18,6 @@ Everything this reads is produced by the flow in sweep.py:
                  actions per output channel, which is what we divide by to get
                  a per-token figure.
 
-  df_dut.stat    written by dflowmap in the optional area pass. "totalArea:"
-                 IS real under -Tgeneric (abc maps onto osu018 and reports
-                 cell area), so it is the one metric that scales today.
-
 Anything missing comes back as None rather than 0, so a failed sub-step is
 visible in the CSV instead of silently looking like a free circuit.
 """
@@ -39,8 +35,6 @@ RE_ENERGY = re.compile(
 RE_TIME = re.compile(r"^\[\s*(\d+)\s*\]")
 # "Channel d.OUT: completed actions 100"
 RE_CHCOUNT = re.compile(r"Channel\s+(\S+):\s+completed actions\s+(\d+)")
-RE_AREA = re.compile(r"totalArea:\s*([\d.]+)")
-RE_LEAK = re.compile(r"totalLeakPow\w*:\s*([\d.]+)")
 
 
 def parse_energy(path):
@@ -81,28 +75,7 @@ def parse_sim_log(path):
     return out, counts
 
 
-def parse_area(path):
-    """dflowmap's area/leakage summary, if the optional area pass ran.
-
-    An area of exactly 0 means dflowmap emitted a stat file but mapped nothing
-    (it happens on probe-based modules), so report it as missing rather than as
-    a zero-area circuit.
-    """
-    if not os.path.exists(path):
-        return {}
-    out = {}
-    with open(path) as f:
-        text = f.read()
-    m = RE_AREA.search(text)
-    if m and float(m.group(1)) > 0:
-        out["area_um2"] = float(m.group(1))
-    m = RE_LEAK.search(text)
-    if m:
-        out["dflow_leak_power"] = float(m.group(1))
-    return out
-
-
-def collect(run_dir, area_stat=None, ops=None):
+def collect(run_dir, ops=None):
     """Gather every metric for one run directory into a flat dict.
 
     `ops` is how many times the module's main loop body ran -- the correct
@@ -144,17 +117,11 @@ def collect(run_dir, area_stat=None, ops=None):
         if dyn is not None:
             m["total_energy_fJ"] = dyn + leak_fJ
 
-    if area_stat:
-        m.update(parse_area(area_stat))
-    else:
-        m.update(parse_area(os.path.join(run_dir, "area", "df_dut_out", "df_dut.stat")))
-
     return m
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("run_dir", help="directory holding energy.txt and sim.log")
-    p.add_argument("--area-stat", default=None, help="path to df_dut.stat")
     args = p.parse_args()
-    print(json.dumps(collect(args.run_dir, args.area_stat), indent=2))
+    print(json.dumps(collect(args.run_dir), indent=2))

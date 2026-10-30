@@ -2,7 +2,7 @@
 # Async_Tech_Sweep -- characterize simple asynchronous building blocks
 # ------------------------------------------------------------------------------
 # For every module in src/ this synthesizes it for a target technology, simulates
-# it back-annotated, and records energy / delay / area. Sweeping the template
+# it back-annotated, and records energy / delay. Sweeping the template
 # parameters gives you the scaling curve of each block in that technology.
 #
 #   make sweep        # everything (slow: synthesis dominates)
@@ -50,13 +50,6 @@ else
   MODULE_ARG = --module $(MODULE)
 endif
 
-# AREA=0 skips the dataflow+dflowmap pass that measures cell area. The pass
-# needs dflowmap's per-cell metrics for TECH, which only some configs ship
-# (generic does, tsmc65 does not); without them it is skipped, not run to fail.
-AREA    ?= 1
-AREA_METRICS := $(ACT_HOME)/conf/$(TECH)/dflow_qdi.metrics
-DO_AREA       = $(if $(filter 0,$(AREA)),,$(wildcard $(AREA_METRICS)))
-
 WORK    := sim/work
 
 # The generated wrappers say `import "multiplier.act"`; ACT_PATH finds src/.
@@ -84,11 +77,6 @@ SYNTH_CONF     = int synth.expropt.skip_verification 1
 #    watches the outputs, runs, counts tokens and writes energy.txt.
 SIM            = actsim -ref=1 -Wlang_subst:off -cnf=decomp_sim.conf top_decomp.act tb_d
 
-# 3. Area, in area/: the dataflow flow is the only one that reports real cell
-#    area under -Tgeneric.
-SYNTH_DATAFLOW = synth2 -T$(TECH) -o df_dut.act -F dataflow -p dut dut.act
-DFLOWMAP       = dflowmap -T$(TECH) -s abc -ref=1 -f qdi -c bd -M 8 -p df_dut df_dut.act
-
 # $(call run,<log>,<command>): run <command> under the timeout; its output goes
 # to <log> (headed by the command line) and its wall time to <log>.time.
 run = { echo '$(2)'; echo; /usr/bin/time -f %e -o $(basename $(1)).time \
@@ -106,9 +94,6 @@ SEL = -n $(N) $(MODULE_ARG) $(if $(filter quick,$@),--quick)
 # For `make help` only (recursive `=`, so nothing runs unless help is asked for).
 HELP_TECHS   = $(shell for d in "$$ACT_HOME"/conf/*/; do \
                  [ -f "$$d/synth.conf" ] && basename "$$d"; done)
-HELP_AREA_TECHS = $(shell for d in "$$ACT_HOME"/conf/*/; do \
-                 [ -f "$$d/synth.conf" ] && [ -f "$$d/dflow_qdi.metrics" ] && \
-                 basename "$$d"; done)
 HELP_MODULES = $(shell $(VENV_BASE) -c "import sys; sys.path.insert(0, 'scripts'); \
                  import sweep; print(*sweep.MODULES)")
 HELP_VAR     = printf "    \033[1;36m%-10s\033[0m %-22s %s\n"
@@ -126,7 +111,6 @@ help: # Show this help
 	@$(HELP_VAR) TECH      "$(TECH)"      "technology: $(HELP_TECHS)"
 	@$(HELP_VAR) MODULE    "$(or $(MODULE),(all))" "sweep only this module (see below)"
 	@$(HELP_VAR) N         "$(N)"         "tokens each source sends, per point"
-	@$(HELP_VAR) AREA      "$(AREA)"      "0 = skip the area pass (runs only for: $(HELP_AREA_TECHS))"
 	@$(HELP_VAR) JOBS      "$(JOBS)"      "points run in parallel"
 	@$(HELP_VAR) TIMEOUT   "$(TIMEOUT)"   "seconds allowed per tool run"
 	@$(HELP_VAR) PYTHON    "$(PYTHON)"    "interpreter for scripts/*.py"
@@ -136,7 +120,7 @@ help: # Show this help
 	@echo ""
 	@echo "  Examples:"
 	@echo "    make quick TECH=tsmc65 JOBS=8"
-	@echo "    make sweep MODULE=adder AREA=0"
+	@echo "    make sweep MODULE=adder"
 	@echo "    make sim/work/adder/width8/sim.done     # rerun one point"
 	@echo ""
 
@@ -153,8 +137,6 @@ sweep: $(VENV_OK) # Full sweep of every module -> sim/csv/*.csv
 quick: $(VENV_OK) # Every curve, secondary axes pinned, to smoke-test the flow
 sweep quick:
 	@$(PYTHON) scripts/sweep.py gen $(SEL)
-	@$(if $(filter 0,$(AREA)),,$(if $(DO_AREA),,echo "note: no $(AREA_METRICS);" \
-	   "skipping the area pass for TECH=$(TECH) (area_um2 stays empty)"))
 	@$(MAKE) --no-print-directory -k -j$(JOBS) points || true
 	@$(PYTHON) scripts/sweep.py collect $(SEL) --tech $(TECH)
 
@@ -167,9 +149,8 @@ sweep quick:
 
 -include $(WORK)/points.mk
 
-points: # Run synth/sim/area on the points from the last sweep/quick
-points: $(addsuffix /sim.done,$(POINTS)) \
-        $(if $(DO_AREA),$(addsuffix /area.done,$(POINTS)))
+points: # Run synth + sim on the points from the last sweep/quick
+points: $(addsuffix /sim.done,$(POINTS))
 
 %/custom.conf:
 	@echo '$(SYNTH_CONF)' > $@
@@ -189,14 +170,6 @@ points: $(addsuffix /sim.done,$(POINTS)) \
 %/sim.done: %/synth.done %/top_decomp.act %/run.scr
 	@echo "  sim    $(point)"
 	@cd $* && $(call run,sim.log,$(SIM) < run.scr)
-	@touch $@
-
-%/area.done: %/dut.act
-	@echo "  area   $(point)"
-	@mkdir -p $*/area && cp $*/dut.act $*/area/ && cd $*/area && \
-	$(call run,synth_df.log,$(SYNTH_DATAFLOW)) && \
-	$(call run,dflowmap.log,$(DFLOWMAP)) && \
-	test -f df_dut_out/df_dut.stat
 	@touch $@
 
 # The .done files are intermediates of `points`; keep them for collect.

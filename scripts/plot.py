@@ -9,8 +9,8 @@ Reads every sim/csv/<module>.csv written by sweep.py and renders:
 
 A metric panel is DROPPED, with a note on the figure, when the column is empty
 or all-zero. Under -Tgeneric the energy columns are all zero (see README), so
-you normally get delay and area only. That is deliberate: a flat line at zero
-is worse than an honest "no data".
+you normally get delay only. That is deliberate: a flat line at zero is worse
+than an honest "no data".
 
 Colours are the first three categorical slots of the data-viz reference palette,
 which are the documented all-pairs-safe subset -- correct here because these are
@@ -42,7 +42,6 @@ SURFACE = "#fcfcfb"
 METRICS = [
     ("delay_per_op_ps", "Delay per operation", "ps"),
     ("energy_per_op_fJ", "Energy per operation", "fJ"),
-    ("area_um2", "Area", "um$^2$"),
 ]
 
 # x = the knob on the x-axis; series = up to 3 lines; facet = one figure each.

@@ -32,7 +32,6 @@ every tool command lives in the Makefile (the *Tool commands* block).
      (retried with abc if Genus fails) produces the decomposed CHP and
      `decomp_sim.conf`, the per-action delay and energy tables.
    - `sim.done`: `actsim -ref=1 -cnf=decomp_sim.conf top_decomp.act tb_d < run.scr`
-   - `area.done` (unless `AREA=0`): `synth2 -F dataflow` + `dflowmap` in `area/`.
 
    Each stage logs to `<stage>.log`, its wall time to `<stage>.time`, and
    touches its `.done` file only on success. Points are independent, so
@@ -40,7 +39,7 @@ every tool command lives in the Makefile (the *Tool commands* block).
    `make sim/work/multiplier/width8/sim.done`.
 
 3. **Collect** -- `sweep.py collect` runs `scripts/extract_metrics.py` on each
-   dir (`energy.txt`, `sim.log`, `df_dut.stat`) and writes one CSV row per
+   dir (`energy.txt`, `sim.log`) and writes one CSV row per
    point; a missing `.done` becomes `SYNTH_FAIL` / `SIM_FAIL`.
 
 Two design choices worth knowing:
@@ -70,7 +69,6 @@ Nothing under `sim/work/` is hand-maintained -- `make clean` deletes it all.
 | `delay_per_op_ps` | `total_delay / ops`. A **throughput** figure (cycle time), not single-token latency: the sources run flat out, so the DUT is kept busy. |
 | `dynamic_energy_fJ` | actsim's `Total:` switching energy |
 | `energy_per_op_fJ` | `dynamic_energy / ops` |
-| `area_um2` | `totalArea` from the optional `dflowmap` pass |
 
 `ops` is deliberately **not** `tokens` (completed output actions). A copy with 4
 outputs emits 4 tokens per input; normalising by tokens would make a wider, more
@@ -78,7 +76,7 @@ expensive fork look 4x cheaper.
 
 ---
 
-## Three honest caveats about `-Tgeneric`
+## Two honest caveats about `-Tgeneric`
 
 `generic` is the only usable technology on this machine: `sky130` ships no
 `synth.conf`, and `tsmc65` is not installed.
@@ -100,20 +98,6 @@ logic depth. But the *handshake* delays around them come from
 `conf/generic/synth.conf`, which labels its own values "these are dummy numbers"
 (`send_delay 40.0`, `recv_delay 40.0`, ...). So **relative** comparisons between
 modules are meaningful; absolute picoseconds are not silicon.
-
-**3. Area is suppressed for composite modules.** Area comes from a *second*,
-different flow (`synth2 -F dataflow` + `dflowmap`) -- so it describes the
-dataflow implementation of the module, not the decomposed one that delay was
-measured on. Worse, that flow drops array dimensions: a 4-deep `buffer` and a
-1-deep one both report 194 um^2, and a 4x4 crossbar reports one split and one
-merge. Those modules are marked `composite=True` in `sweep.py` and their area is
-dropped with a reason in the `area_note` column, rather than published wrong.
-
-Area is therefore trustworthy only for **leaf** modules (one CHP process in the
-DUT): multiplier, adder, mac, copy, split, det_merge, cond_select.
-Probe-based modules (`non_det_merge`, `xbar_nd`) get no area at all -- the
-dataflow flow cannot synthesize probes, which is why SPACE replaces its
-non-deterministic merges with handwritten dataflow before that step.
 
 ---
 

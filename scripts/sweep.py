@@ -2,7 +2,7 @@
 """
 Generate the per-point test benches, and collect results into CSVs.
 
-The tools themselves (synth2, actsim, dflowmap) are run by the Makefile, not
+The tools themselves (synth2, actsim) are run by the Makefile, not
 from here. `make sweep` is three steps:
 
   1. sweep.py gen       for every (module, parameter) point, write
@@ -19,8 +19,8 @@ from here. `make sweep` is three steps:
                           run.scr         the actsim command script
                         and list the point dirs in sim/work/points.mk.
 
-  2. make points        synthesize, simulate and (optionally) measure area in
-                        every listed dir -- see the tool rules in the Makefile.
+  2. make points        synthesize and simulate every listed dir -- see the
+                        tool rules in the Makefile.
 
   3. sweep.py collect   parse each dir into a row of sim/csv/<module>.csv.
 
@@ -148,7 +148,6 @@ def w_buffer(p, n):
         ],
         watch=["d.OUT"],
         ops=n,
-        composite=True,
     )
 
 
@@ -259,7 +258,6 @@ def w_xbar_det(p, n):
         drivers=drivers,
         watch=[f"d.OUT[{j}]" for j in range(N)],
         ops=n * N,
-        composite=True,
     )
 
 
@@ -287,7 +285,6 @@ def w_xbar_nd(p, n):
         drivers=drivers,
         watch=[f"d.OUT[{j}]" for j in range(NO)],
         ops=n * NI,
-        composite=True,
     )
 
 
@@ -511,19 +508,11 @@ def collect_point(module, params, n, tech):
         return row
     row["sim_s"] = round(read_time(os.path.join(wd, "sim.time")), 1)
 
-    area_stat = None
-    if has("area.done"):
-        area_stat = os.path.join(wd, "area", "df_dut_out", "df_dut.stat")
-
-    m = extract_metrics.collect(wd, area_stat, ops=spec.get("ops"))
+    m = extract_metrics.collect(wd, ops=spec.get("ops"))
     # tokens counts outputs only; `track` channels just prove the run happened.
     counts = m.pop("chcounts", None) or {}
     m["tokens"] = sum(v for c, v in counts.items() if c in spec["watch"])
     ran = m["tokens"] or any(counts.get(c) for c in spec.get("track", []))
-    if spec.get("composite") and "area_um2" in m:
-        # See the note on `composite` above: the number is an undercount, so
-        # drop it rather than plot something wrong.
-        m["area_note"] = f"dropped {m.pop('area_um2')}: arrayed sub-instances undercounted"
     row.update(m)
     row["status"] = "OK" if (has("sim.done") and ran) else "SIM_FAIL"
     return row
@@ -538,11 +527,9 @@ def collect(args):
             rows.append(row)
             d = row.get("delay_per_op_ps")
             e = row.get("energy_per_op_fJ")
-            a = row.get("area_um2")
             print(f"  {tag_of(params):<40} {row['status']:<10} "
                   f"delay/op={d if d is None else round(d, 1)} ps  "
-                  f"E/op={e if e is None else round(e, 2)} fJ  "
-                  f"area={a} um2")
+                  f"E/op={e if e is None else round(e, 2)} fJ")
         print(f"  -> {os.path.relpath(write_csv(module, rows), REPO)}")
 
 
@@ -553,7 +540,7 @@ COLS = ["module", "tech", "status", "width", "depth", "ports",
         "total_delay_ps", "delay_per_op_ps",
         "dynamic_energy_fJ", "energy_per_op_fJ",
         "leakage_power_W", "leakage_energy_fJ", "total_energy_fJ",
-        "area_um2", "area_note", "actsim_area", "dflow_leak_power",
+        "actsim_area",
         "synth_backend", "synth_s", "sim_s"]
 
 
