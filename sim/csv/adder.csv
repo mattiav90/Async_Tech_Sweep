@@ -1,3 +1,7 @@
-module,tech,status,width,depth,terms,ports,inDim,outDim,variant,mode,inputs_per_source,ops,tokens,total_delay_ps,delay_per_op_ps,dynamic_energy_fJ,energy_per_op_fJ,leakage_power_W,leakage_energy_fJ,total_energy_fJ,area_um2,area_note,actsim_area,dflow_leak_power,synth_s,sim_s
-adder,generic,OK,4,,,,,,,,30,30,30,22639,754.6333333333333,0.0,0.0,0.0,0.0,0.0,769.0,,0.0,3.0,0.9,1.3
-adder,generic,OK,8,,,,,,,,30,30,30,38659,1288.6333333333334,0.0,0.0,0.0,0.0,0.0,1631.0,,0.0,3.0,1.5,1.4
+module,tech,status,width,depth,ports,inDim,outDim,variant,mode,inputs_per_source,ops,tokens,total_delay_ps,delay_per_op_ps,dynamic_energy_fJ,energy_per_op_fJ,leakage_power_W,leakage_energy_fJ,total_energy_fJ,area_um2,area_note,actsim_area,dflow_leak_power,synth_backend,synth_s,sim_s
+adder,tsmc65,OK,4,,,,,,,30,30,30,12019,400.6333333333333,8160.0,272.0,2e-06,24.038,8184.038,,,0.0,,genus,0.3,0.1
+adder,tsmc65,OK,8,,,,,,,30,30,30,21409,713.6333333333333,17580.0,586.0,5e-06,107.04500000000002,17687.045,,,0.0,,genus,0.3,0.1
+adder,tsmc65,OK,12,,,,,,,30,30,30,30799,1026.6333333333334,27180.0,906.0,8e-06,246.392,27426.392,,,0.0,,genus,0.3,0.1
+adder,tsmc65,OK,16,,,,,,,30,30,30,40159,1338.6333333333334,36750.0,1225.0,1.1e-05,441.749,37191.749,,,0.0,,genus,0.3,0.1
+adder,tsmc65,OK,24,,,,,,,30,30,30,58939,1964.6333333333334,55950.0,1865.0,1.7e-05,1001.963,56951.963,,,0.0,,genus,0.3,0.1
+adder,tsmc65,OK,32,,,,,,,30,30,30,77719,2590.633333333333,75150.0,2505.0,2.2e-05,1709.818,76859.818,,,0.0,,genus,0.3,0.1

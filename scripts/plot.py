@@ -49,20 +49,19 @@ METRICS = [
 PLOT_SPEC = {
     "multiplier":    dict(x="width"),
     "adder":         dict(x="width"),
-    "mac":           dict(x="terms", series="width"),
+    "mac":           dict(x="width"),
     "buffer":        dict(x="depth"),
     "copy":          dict(x="outDim"),
     "split":         dict(x="outDim"),
     "det_merge":     dict(x="inDim"),
     "non_det_merge": dict(x="inDim"),
     "xbar_det":      dict(x="ports", series="width"),
-    "xbar_nd":       dict(x="inDim", series="outDim", facet="width"),
+    "xbar_nd":       dict(x="ports", series="width"),
 }
 
 XLABEL = {
     "width": "data width (bits)",
     "depth": "chain depth (stages)",
-    "terms": "accumulation length (terms)",
     "ports": "ports (N x N)",
     "inDim": "input ports",
     "outDim": "output ports",
@@ -88,6 +87,61 @@ def int_ticks(ax, values):
     ax.set_xticklabels([str(v) for v in vals])
 
 
+# A panel whose largest value reaches 1000 in one of these units is drawn in
+# the next unit up, so energies read as 2.5 pJ rather than 2,505 fJ.
+UNIT_UP = {"fJ": "pJ"}
+
+
+def panel_unit(frames, col, unit):
+    """(divisor, unit) for one panel, given every frame drawn on it."""
+    vals = pd.concat([pd.to_numeric(d[col], errors="coerce") for d in frames])
+    if unit in UNIT_UP and vals.abs().max() >= 1000:
+        return 1000.0, UNIT_UP[unit]
+    return 1.0, unit
+
+
+def fmt(v):
+    """Value label: 3-4 significant digits, thousands separated."""
+    a = abs(v)
+    if a == 0:
+        return "0"
+    if a >= 100:
+        return f"{v:,.0f}"
+    if a >= 10:
+        return f"{v:.1f}"
+    if a >= 1:
+        return f"{v:.2f}"
+    return f"{v:.3g}"
+
+
+def label_points(ax, curves):
+    """Write each point's value beside its marker, in ink (never series) color.
+
+    `curves` is [(xs, ys), ...], one per series drawn on `ax`. At each x the
+    highest curve is labelled above its marker and the lowest below, so close
+    or crossing curves label on opposite sides; a middle one (3 series) goes to
+    the right.
+    """
+    at = {}
+    for xs, ys in curves:
+        for x, y in zip(xs, ys):
+            if pd.notna(x) and pd.notna(y):
+                at.setdefault(x, []).append(y)
+    for x, ys in at.items():
+        ys = sorted(ys, reverse=True)
+        for rank, y in enumerate(ys):
+            if rank == 0:
+                off, ha, va = (0, 7), "center", "bottom"
+            elif rank == len(ys) - 1:
+                off, ha, va = (0, -8), "center", "top"
+            else:
+                off, ha, va = (8, 0), "left", "center"
+            ax.annotate(fmt(y), (x, y), xytext=off, textcoords="offset points",
+                        ha=ha, va=va, fontsize=7, color=INK2, zorder=4)
+    # Headroom so the outermost labels stay inside the axes.
+    ax.margins(y=0.14)
+
+
 def has_data(df, col):
     if col not in df.columns:
         return False
@@ -96,18 +150,25 @@ def has_data(df, col):
 
 
 def draw_panel(ax, df, xcol, metric, label, unit, series_col=None):
+    k, unit = panel_unit([df], metric, unit)
+    curves = []
     if series_col and df[series_col].nunique() > 1:
         vals = sorted(df[series_col].dropna().unique())
         for i, v in enumerate(vals[:3]):
             sub = df[df[series_col] == v].sort_values(xcol)
-            ax.plot(sub[xcol], pd.to_numeric(sub[metric], errors="coerce"),
+            ys = pd.to_numeric(sub[metric], errors="coerce") / k
+            ax.plot(sub[xcol], ys,
                     marker="o", markersize=5, linewidth=2,
                     color=SERIES[i], label=f"{series_col}={int(v)}", zorder=3)
+            curves.append((sub[xcol], ys))
     else:
         sub = df.sort_values(xcol)
-        ax.plot(sub[xcol], pd.to_numeric(sub[metric], errors="coerce"),
+        ys = pd.to_numeric(sub[metric], errors="coerce") / k
+        ax.plot(sub[xcol], ys,
                 marker="o", markersize=5, linewidth=2,
                 color=SERIES[0], zorder=3)
+        curves.append((sub[xcol], ys))
+    label_points(ax, curves)
     int_ticks(ax, df[xcol])
     ax.set_xlabel(XLABEL.get(xcol, xcol), color=INK2, fontsize=9)
     ax.set_title(f"{label}  [{unit}]", color=INK, fontsize=10, loc="left", pad=8)
@@ -172,11 +233,16 @@ def plot_compare(name, title, frames, xcol, xlabel):
     axes = [axes] if len(live) == 1 else list(axes)
     fig.patch.set_facecolor(SURFACE)
     for ax, (c, l, u) in zip(axes, live):
+        k, u = panel_unit([d for _, d in frames[:3]], c, u)
+        curves = []
         for i, (lbl, d) in enumerate(frames[:3]):
             d = d.sort_values(xcol)
-            ax.plot(d[xcol], pd.to_numeric(d[c], errors="coerce"),
+            ys = pd.to_numeric(d[c], errors="coerce") / k
+            ax.plot(d[xcol], ys,
                     marker="o", markersize=5, linewidth=2,
                     color=SERIES[i], label=lbl, zorder=3)
+            curves.append((d[xcol], ys))
+        label_points(ax, curves)
         int_ticks(ax, pd.concat([d[xcol] for _, d in frames]))
         ax.set_xlabel(xlabel, color=INK2, fontsize=9)
         ax.set_title(f"{l}  [{u}]", color=INK, fontsize=10, loc="left", pad=8)
@@ -202,8 +268,7 @@ def plot_cond_select(df):
     df["case"] = df["variant"] + "\n(" + df["mode"] + ")"
     # Fixed order so the baselines bracket the thing being measured.
     order = ["plain_adder\n(always)", "cond_adder\n(always)",
-             "cond_adder\n(never)", "skip_adder\n(never)",
-             "cond_adder\n(random)"]
+             "cond_adder\n(random)", "cond_adder\n(never)"]
     cases = [c for c in order if c in set(df["case"])]
     widths = sorted(df["width"].dropna().unique())
 
@@ -211,25 +276,30 @@ def plot_cond_select(df):
     axes = [axes] if len(live) == 1 else list(axes)
     fig.patch.set_facecolor(SURFACE)
     for ax, (c, l, u) in zip(axes, live):
+        k, u = panel_unit([df], c, u)
         nb = len(widths)
         bw = 0.8 / nb
         for i, w in enumerate(widths[:3]):
             d = df[df["width"] == w].set_index("case")
-            vals = [pd.to_numeric(d[c], errors="coerce").get(k, float("nan"))
-                    for k in cases]
+            vals = [pd.to_numeric(d[c], errors="coerce").get(case, float("nan")) / k
+                    for case in cases]
             xs = [j + (i - (nb - 1) / 2) * bw for j in range(len(cases))]
             # 2px surface gap between adjacent bars (bw*0.92).
-            ax.bar(xs, vals, width=bw * 0.92, color=SERIES[i],
-                   label=f"width={int(w)}", zorder=3)
+            bars = ax.bar(xs, vals, width=bw * 0.92, color=SERIES[i],
+                          label=f"width={int(w)}", zorder=3)
+            ax.bar_label(bars, labels=["" if pd.isna(v) else fmt(v) for v in vals],
+                         padding=2, fontsize=7, color=INK2)
+        ax.margins(y=0.1)
         ax.set_xticks(range(len(cases)))
         ax.set_xticklabels(cases, fontsize=8, color=INK2)
         ax.set_title(f"{l}  [{u}]", color=INK, fontsize=10, loc="left", pad=8)
         style(ax)
-    fig.suptitle("Cost of a CHP selection: [ guard -> add [] else -> skip ]",
+    fig.suptitle("Cost of a CHP selection: [ c=1 -> OUT!a+b [] else -> skip ]",
                  color=INK, fontsize=12, x=0.01, ha="left", y=0.99)
     fig.text(0.01, 0.015,
-             "plain_adder/skip_adder have no selection but still consume CTRL, "
-             "so the only difference is the [ ] itself.",
+             "plain_adder (OUT!a+b, no selection) also consumes CTRL, so vs "
+             "cond_adder(always) the only difference is the [ ] itself. "
+             "always / random / never = a+b path taken 100% / 50% / 0%.",
              color=INK2, fontsize=8)
     h, lab = axes[0].get_legend_handles_labels()
     if len(lab) >= 2:
@@ -276,23 +346,17 @@ def main():
         [("det_merge (SEL-driven)", dm), ("non_det_merge (probes)", ndm)],
         "inDim", XLABEL["inDim"])
 
-    # Square crossbars only, so the two variants are comparable port-for-port.
+    # Both crossbars are square (ports = N x N), so they line up port-for-port.
     xd, xn = load("xbar_det"), load("xbar_nd")
     if xd is not None and xn is not None and not xn.empty:
-        # xbar_nd has an all-NaN `ports` column from the shared CSV schema;
-        # drop it before inDim takes that name, or the rename collides.
-        xn_sq = (xn[xn["inDim"] == xn["outDim"]]
-                 .drop(columns=["ports"], errors="ignore")
-                 .rename(columns={"inDim": "ports"}))
-        w = sorted(set(xd["width"]) & set(xn_sq["width"]))
+        w = sorted(set(xd["width"]) & set(xn["width"]))
         if w:
             plot_compare(
                 "crossbar_det_vs_probe",
                 f"Crossbar scaling, deterministic vs probed (width={int(w[0])})",
                 [("xbar_det", xd[xd["width"] == w[0]]),
-                 ("xbar_nd", xn_sq[xn_sq["width"] == w[0]])],
+                 ("xbar_nd", xn[xn["width"] == w[0]])],
                 "ports", XLABEL["ports"])
-
 
 if __name__ == "__main__":
     main()

@@ -5,8 +5,9 @@ ACT: synthesize each one for a target technology, simulate it back-annotated,
 and sweep its template parameters to get a scaling curve.
 
 ```bash
-make quick        # small subset of every module -- check the flow works
-make sweep        # the full sweep  -> sim/csv/*.csv
+make venv         # one-time: .venv with matplotlib + pandas (other targets do this on demand)
+make quick        # every curve (6 points), secondary axes pinned -- faster check
+make sweep        # the full sweep  -> sim/csv/*.csv  (JOBS=8 to parallelize)
 make plot         # render           -> sim/plots/*.png
 make help         # targets and variables
 ```
@@ -15,24 +16,32 @@ make help         # targets and variables
 
 ## How a single measurement works
 
-For one parameter point (say `multiplier`, width 8) the flow is:
+`make sweep` is three steps. Python only writes inputs and reads outputs;
+every tool command lives in the Makefile (the *Tool commands* block).
 
-1. **Generate a wrapper.** `scripts/sweep.py` writes `sim/work/multiplier/width8/dut.act`:
-   a non-template proc `dut` holding one concrete instance of the module, plus a
-   test bench `tb` that feeds it from `src/harness.act` sources and drains it
-   into sinks.
+1. **Generate wrappers** -- `sweep.py gen`. For each parameter point (say
+   `multiplier`, width 8) it writes `sim/work/multiplier/width8/` with
+   `dut.act` (a non-template proc `dut` holding one concrete instance of the
+   module, plus a test bench `tb` that feeds it from `src/harness.act` sources
+   and drains it into sinks), `top_decomp.act` (the same bench with
+   `decomp_dut` swapped in) and `run.scr` (the actsim script). The point dirs
+   are listed in `sim/work/points.mk`.
 
-2. **Synthesize only the DUT.**
-   `synth2 -Tgeneric -o dut_decomp.act -F decomp -t -p dut dut.act`
-   produces the decomposed CHP and `decomp_sim.conf`, which carries the
-   per-action delay and energy tables.
+2. **Run the tools** -- `make points`, i.e. per point dir:
+   - `synth.done`: `synth2 -T$(TECH) -o dut_decomp.act -F decomp -t -E genus -p dut dut.act`
+     (retried with abc if Genus fails) produces the decomposed CHP and
+     `decomp_sim.conf`, the per-action delay and energy tables.
+   - `sim.done`: `actsim -ref=1 -cnf=decomp_sim.conf top_decomp.act tb_d < run.scr`
+   - `area.done` (unless `AREA=0`): `synth2 -F dataflow` + `dflowmap` in `area/`.
 
-3. **Simulate back-annotated.**
-   `actsim -ref=1 -cnf=decomp_sim.conf top_decomp.act tb_d`
-   where `top_decomp.act` is the same bench with `decomp_dut` swapped in.
+   Each stage logs to `<stage>.log`, its wall time to `<stage>.time`, and
+   touches its `.done` file only on success. Points are independent, so
+   `make sweep JOBS=8` runs 8 at once, and a single point can be rerun by hand:
+   `make sim/work/multiplier/width8/sim.done`.
 
-4. **Parse.** `scripts/extract_metrics.py` reads `energy.txt` and the sim log
-   into one CSV row.
+3. **Collect** -- `sweep.py collect` runs `scripts/extract_metrics.py` on each
+   dir (`energy.txt`, `sim.log`, `df_dut.stat`) and writes one CSV row per
+   point; a missing `.done` becomes `SYNTH_FAIL` / `SIM_FAIL`.
 
 Two design choices worth knowing:
 
@@ -116,15 +125,15 @@ All are in `src/`, all templated on at least `width`.
 |---|---|---|
 | `multiplier` | width | datapath cost vs width |
 | `adder` | width | the cheap baseline |
-| `mac` | width, terms | multiply-accumulate; `RST` on a channel starts a new accumulation, so there is **no loop in the hardware** -- the harness decides how long an accumulation is |
+| `mac` | width | multiply-accumulate, accumulator `2*width + 8` bits; `RST` is held at 0, so the reset selection is in the circuit but never taken |
 | `buffer` | width, depth | slack chain: shows that depth buys latency, not throughput |
 | `copy` | width, outDim | fork / broadcast |
 | `split` | width, outDim | demux, the input stage of the crossbar |
 | `det_merge` | width, inDim | controlled merge -- a `SEL` channel picks, no arbiter |
 | `non_det_merge` | width, inDim | **probed** arbitrated merge; same CHP as SPACE's `Non_Det_Merge_Single` |
-| `cond_select` | width, variant, mode | what a CHP `[ g -> .. [] else -> .. ]` costs |
+| `cond_select` | width, variant, mode | what a CHP `[ c=1 -> OUT!a+b [] else -> skip ]` costs |
 | `xbar_det` | width, ports | crossbar, split + `det_merge`, no arbitration |
-| `xbar_nd` | width, inDim, outDim | crossbar, split + **probed** `non_det_merge` |
+| `xbar_nd` | width, ports | crossbar, split + **probed** `non_det_merge` |
 
 ### The crossbar's two types
 
@@ -132,7 +141,10 @@ Both are `split` on the input side and a merge on the output side; the merge is
 the variable.
 
 - **`xbar_nd`** uses the probed `non_det_merge`, so destinations can collide and
-  the arbiter resolves them. Free to be rectangular.
+  the arbiter resolves them. The template can be rectangular, but it is swept
+  square (`ports` = N x N) so it lines up port-for-port with `xbar_det`. Its
+  energy is the splits' only: the probed merges have no expression for Genus to
+  map, so synth2 charges them 0 (see `non_det_merge`).
 - **`xbar_det`** uses `det_merge`, driven by a rotation schedule from the test
   bench (round *r*: input *i* -> output *(i+r) mod N*, output *j* takes input
   *(j-r) mod N*). That is a permutation, so nothing ever contends and the
@@ -141,28 +153,29 @@ the variable.
 
 ### `cond_select` -- the cost of `[ ]`
 
-Three processes with identical handshake counts (all three receive `CTRL`), so
-the only difference is the selection:
+- `cond_adder` -- `[ c=1 -> OUT!a+b [] else -> skip ]`
+- `plain_adder` -- `OUT!a+b`, no selection; it still receives `CTRL`, so its
+  handshakes match `cond_adder(always)` exactly
 
-- `plain_adder` -- always adds, no selection
-- `skip_adder` -- never adds, no selection
-- `cond_adder` -- `[ c=1 -> OUT!a+b [] else -> OUT!a ]`
+`mode` pins `cond_adder`'s `CTRL`:
 
-and `mode` pins `CTRL` to `always` / `never` / `random`. So:
+- `always` -- every token takes the `a+b` path; vs `plain_adder` this is
+  **the overhead of the selection itself**
+- `never` -- every token takes the `skip` path (no output at all)
+- `random` -- 50/50, what a data-dependent branch really costs
 
-- `cond_adder(always)` vs `plain_adder` = **the overhead of the selection**
-- `cond_adder(always)` vs `cond_adder(never)` = the cost of the adder path
-- `cond_adder(random)` = what a data-dependent branch really costs
+On the `skip` path nothing is sent, so the run is timed on `CTRL` (received
+every iteration) as well as `OUT`, and `tokens` counts only the outputs.
 
 ---
 
 ## Layout
 
 ```
-Makefile              sweep / plot / clean
+Makefile              sweep / plot / clean, and every tool command
 src/*.act             the modules, all templated
 src/harness.act       test-bench-only sources and sinks (never synthesized)
-scripts/sweep.py      generates benches, runs synth2 + actsim, writes CSVs
+scripts/sweep.py      sweep points; generates benches, collects CSVs
 scripts/extract_metrics.py   parses one run directory into metrics
 scripts/plot.py       sim/csv/*.csv -> sim/plots/*.png
 sim/csv/              results, one CSV per module, one row per parameter point

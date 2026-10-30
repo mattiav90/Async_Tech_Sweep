@@ -1,3 +1,7 @@
-module,tech,status,width,depth,terms,ports,inDim,outDim,variant,mode,inputs_per_source,ops,tokens,total_delay_ps,delay_per_op_ps,dynamic_energy_fJ,energy_per_op_fJ,leakage_power_W,leakage_energy_fJ,total_energy_fJ,area_um2,area_note,actsim_area,dflow_leak_power,synth_s,sim_s
-split,generic,OK,8,,,,,2,,,30,30,30,19069,635.6333333333333,0.0,0.0,0.0,0.0,0.0,413.0,,0.0,5.0,1.7,1.2
-split,generic,OK,8,,,,,4,,,30,30,30,18949,631.6333333333333,0.0,0.0,0.0,0.0,0.0,823.0,,0.0,7.0,1.6,1.0
+module,tech,status,width,depth,ports,inDim,outDim,variant,mode,inputs_per_source,ops,tokens,total_delay_ps,delay_per_op_ps,dynamic_energy_fJ,energy_per_op_fJ,leakage_power_W,leakage_energy_fJ,total_energy_fJ,area_um2,area_note,actsim_area,dflow_leak_power,synth_backend,synth_s,sim_s
+split,tsmc65,OK,8,,,,2,,,30,30,30,5119,170.63333333333333,510.0,17.0,0.0,0.0,510.0,,,0.0,,genus,0.7,0.1
+split,tsmc65,OK,8,,,,4,,,30,30,30,5899,196.63333333333333,3600.0,120.0,1e-06,5.899,3605.899,,,0.0,,genus,1.1,0.1
+split,tsmc65,OK,8,,,,6,,,30,30,30,5809,193.63333333333333,7290.0,243.0,1e-06,5.809,7295.809,,,0.0,,genus,1.5,0.1
+split,tsmc65,OK,8,,,,8,,,30,30,30,6439,214.63333333333333,9240.0,308.0,1e-06,6.438999999999999,9246.439,,,0.0,,genus,2.1,0.1
+split,tsmc65,OK,8,,,,12,,,30,30,30,6439,214.63333333333333,12180.0,406.0,2e-06,12.877999999999998,12192.878,,,0.0,,genus,2.9,0.1
+split,tsmc65,OK,8,,,,16,,,30,30,30,6529,217.63333333333333,16980.0,566.0,3e-06,19.587,16999.587,,,0.0,,genus,3.7,0.1

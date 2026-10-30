@@ -6,16 +6,31 @@
 # parameters gives you the scaling curve of each block in that technology.
 #
 #   make sweep        # everything (slow: synthesis dominates)
-#   make quick        # small subset, to check the flow works
+#   make sweep JOBS=8 # ... running 8 points at once
+#   make quick        # every curve, secondary axes pinned to one value
 #   make plot         # render sim/plots/*.png from sim/csv/*.csv
 #   make all          # quick + plot
+#
+# A sweep is three steps:
+#   1. scripts/sweep.py gen      writes one dir per parameter point under
+#                                sim/work/ (test bench + actsim script)
+#   2. make points               runs the tools below in every point dir
+#   3. scripts/sweep.py collect  parses the point dirs into sim/csv/*.csv
 # ==============================================================================
 
 SHELL   := /usr/bin/env bash
-PYTHON  ?= python3
 
-# Only `generic` is usable here: sky130 ships no synth.conf, and tsmc65 is not
-# installed. Override once a real PDK is on the machine:  make sweep TECH=tsmc65
+# Python deps (matplotlib, pandas) live in a repo-local venv, built on demand
+# from requirements.txt. The base is the system /usr/bin/python3.11 on purpose:
+# a venv built on the cluster's module Python cannot find libpython3.10.so
+# unless that module is loaded, so it breaks in editors and batch jobs.
+VENV      := .venv
+VENV_BASE ?= /usr/bin/python3.11
+PYTHON    ?= $(VENV)/bin/python
+VENV_OK   := $(VENV)/.installed
+
+# Technology config from $ACT_HOME/conf. Only the ones with a synth.conf can be
+# synthesized -- here generic and tsmc65 (`make help` lists them).
 TECH    ?= generic
 
 # Tokens generated per source, per parameter point.
@@ -23,6 +38,9 @@ N       ?= 30
 
 # Per-tool wall-clock limit. Wide multipliers are the slow case.
 TIMEOUT ?= 1800
+
+# Points run in parallel by `make sweep` / `make quick`.
+JOBS    ?= 1
 
 # MODULE=<name> restricts the run to one module (repeat by rerunning).
 MODULE  ?=
@@ -32,54 +50,171 @@ else
   MODULE_ARG = --module $(MODULE)
 endif
 
-# AREA=0 skips the dataflow+dflowmap pass that measures cell area.
+# AREA=0 skips the dataflow+dflowmap pass that measures cell area. The pass
+# needs dflowmap's per-cell metrics for TECH, which only some configs ship
+# (generic does, tsmc65 does not); without them it is skipped, not run to fail.
 AREA    ?= 1
-ifeq ($(AREA),0)
-  AREA_ARG = --no-area
-else
-  AREA_ARG =
+AREA_METRICS := $(ACT_HOME)/conf/$(TECH)/dflow_qdi.metrics
+DO_AREA       = $(if $(filter 0,$(AREA)),,$(wildcard $(AREA_METRICS)))
+
+WORK    := sim/work
+
+# The generated wrappers say `import "multiplier.act"`; ACT_PATH finds src/.
+ifeq ($(findstring $(CURDIR)/src,$(ACT_PATH)),)
+  export ACT_PATH := $(CURDIR)/src$(if $(ACT_PATH),:$(ACT_PATH))
 endif
 
-SWEEP = $(PYTHON) scripts/sweep.py --tech $(TECH) -n $(N) --timeout $(TIMEOUT) \
-        $(MODULE_ARG) $(AREA_ARG)
+# ==============================================================================
+# Tool commands
+# ------------------------------------------------------------------------------
+# Every command runs inside one point's dir, sim/work/<module>/<tag>/, where
+# `sweep.py gen` has written dut.act (the `dut` wrapper + test bench `tb`),
+# top_decomp.act (the bench around the decomposed `decomp_dut`) and run.scr.
+# ==============================================================================
+
+# 1. Decompose the DUT. Genus maps the expressions: it is the only backend that
+#    fills the energy/leakage tables in decomp_sim.conf (the built-in abc leaves
+#    them all 0). If Genus fails, abc is retried so delay is still measured.
+SYNTH_DECOMP   = synth2 -T$(TECH) -o dut_decomp.act -F decomp -t
+SYNTH_GENUS    = $(SYNTH_DECOMP) -E genus -cnf=custom.conf -p dut dut.act
+SYNTH_ABC      = $(SYNTH_DECOMP) -p dut dut.act
+SYNTH_CONF     = int synth.expropt.skip_verification 1
+
+# 2. Simulate the decomposed DUT, back-annotated with decomp_sim.conf. run.scr
+#    watches the outputs, runs, counts tokens and writes energy.txt.
+SIM            = actsim -ref=1 -Wlang_subst:off -cnf=decomp_sim.conf top_decomp.act tb_d
+
+# 3. Area, in area/: the dataflow flow is the only one that reports real cell
+#    area under -Tgeneric.
+SYNTH_DATAFLOW = synth2 -T$(TECH) -o df_dut.act -F dataflow -p dut dut.act
+DFLOWMAP       = dflowmap -T$(TECH) -s abc -ref=1 -f qdi -c bd -M 8 -p df_dut df_dut.act
+
+# $(call run,<log>,<command>): run <command> under the timeout; its output goes
+# to <log> (headed by the command line) and its wall time to <log>.time.
+run = { echo '$(2)'; echo; /usr/bin/time -f %e -o $(basename $(1)).time \
+        timeout $(TIMEOUT) $(2); } > $(1) 2>&1
+
+# sim/work/adder/width8 -> adder/width8, for progress lines.
+point = $(patsubst $(WORK)/%,%,$*)
+
+# Arguments both sweep.py steps get, so they agree on the set of points.
+SEL = -n $(N) $(MODULE_ARG) $(if $(filter quick,$@),--quick)
 
 .DEFAULT_GOAL := help
-.PHONY: help sweep quick plot all list clean distclean
+.PHONY: help venv sweep quick points plot all list clean distclean
+
+# For `make help` only (recursive `=`, so nothing runs unless help is asked for).
+HELP_TECHS   = $(shell for d in "$$ACT_HOME"/conf/*/; do \
+                 [ -f "$$d/synth.conf" ] && basename "$$d"; done)
+HELP_AREA_TECHS = $(shell for d in "$$ACT_HOME"/conf/*/; do \
+                 [ -f "$$d/synth.conf" ] && [ -f "$$d/dflow_qdi.metrics" ] && \
+                 basename "$$d"; done)
+HELP_MODULES = $(shell $(VENV_BASE) -c "import sys; sys.path.insert(0, 'scripts'); \
+                 import sweep; print(*sweep.MODULES)")
+HELP_VAR     = printf "    \033[1;36m%-10s\033[0m %-22s %s\n"
 
 help: # Show this help
 	@echo ""
 	@echo "Async_Tech_Sweep -- asynchronous building-block characterization"
 	@echo ""
+	@echo "  Targets:"
 	@awk 'BEGIN {FS = ":.*?# "} /^[a-zA-Z0-9_-]+:.*?# / \
-	     { printf "  \033[1;32m%-12s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+	     { printf "    \033[1;32m%-10s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 	@echo ""
 	@echo "  Variables (make <target> VAR=value):"
-	@printf "    %-10s %s\n" "TECH"    "technology config        (default: $(TECH))"
-	@printf "    %-10s %s\n" "N"       "inputs per source        (default: $(N))"
-	@printf "    %-10s %s\n" "MODULE"  "restrict to one module   (default: all)"
-	@printf "    %-10s %s\n" "AREA"    "0 = skip the area pass   (default: $(AREA))"
-	@printf "    %-10s %s\n" "TIMEOUT" "per-tool seconds         (default: $(TIMEOUT))"
+	@$(HELP_VAR) VARIABLE "CURRENT VALUE" "MEANING"
+	@$(HELP_VAR) TECH      "$(TECH)"      "technology: $(HELP_TECHS)"
+	@$(HELP_VAR) MODULE    "$(or $(MODULE),(all))" "sweep only this module (see below)"
+	@$(HELP_VAR) N         "$(N)"         "tokens each source sends, per point"
+	@$(HELP_VAR) AREA      "$(AREA)"      "0 = skip the area pass (runs only for: $(HELP_AREA_TECHS))"
+	@$(HELP_VAR) JOBS      "$(JOBS)"      "points run in parallel"
+	@$(HELP_VAR) TIMEOUT   "$(TIMEOUT)"   "seconds allowed per tool run"
+	@$(HELP_VAR) PYTHON    "$(PYTHON)"    "interpreter for scripts/*.py"
+	@$(HELP_VAR) VENV_BASE "$(VENV_BASE)" "python that \`make venv\` builds .venv from"
+	@echo ""
+	@echo "  Modules: $(HELP_MODULES)"
+	@echo ""
+	@echo "  Examples:"
+	@echo "    make quick TECH=tsmc65 JOBS=8"
+	@echo "    make sweep MODULE=adder AREA=0"
+	@echo "    make sim/work/adder/width8/sim.done     # rerun one point"
 	@echo ""
 
-sweep: # Full sweep of every module -> sim/csv/*.csv
-	@$(SWEEP)
+$(VENV_OK): requirements.txt
+	@test -x $(VENV)/bin/python || $(VENV_BASE) -m venv $(VENV)
+	@$(VENV)/bin/pip install -q --upgrade pip
+	@$(VENV)/bin/pip install -q -r requirements.txt
+	@touch $@
+	@echo "venv ready: $(VENV)"
 
-quick: # Small subset of every module, to smoke-test the flow
-	@$(SWEEP) --quick
+venv: $(VENV_OK) # Create/update .venv from requirements.txt
 
-plot: # Render sim/plots/*.png from sim/csv/*.csv
+sweep: $(VENV_OK) # Full sweep of every module -> sim/csv/*.csv
+quick: $(VENV_OK) # Every curve, secondary axes pinned, to smoke-test the flow
+sweep quick:
+	@$(PYTHON) scripts/sweep.py gen $(SEL)
+	@$(if $(filter 0,$(AREA)),,$(if $(DO_AREA),,echo "note: no $(AREA_METRICS);" \
+	   "skipping the area pass for TECH=$(TECH) (area_um2 stays empty)"))
+	@$(MAKE) --no-print-directory -k -j$(JOBS) points || true
+	@$(PYTHON) scripts/sweep.py collect $(SEL) --tech $(TECH)
+
+# ==============================================================================
+# Per-point rules. `make points` runs every dir listed by the last `gen`; one
+# point can also be run by hand, e.g.  make sim/work/adder/width8/sim.done
+# A stage touches its .done file only on success; `sweep.py collect` reads a
+# missing one as SYNTH_FAIL / SIM_FAIL, and -k keeps the other points going.
+# ==============================================================================
+
+-include $(WORK)/points.mk
+
+points: # Run synth/sim/area on the points from the last sweep/quick
+points: $(addsuffix /sim.done,$(POINTS)) \
+        $(if $(DO_AREA),$(addsuffix /area.done,$(POINTS)))
+
+%/custom.conf:
+	@echo '$(SYNTH_CONF)' > $@
+
+%/synth.done: %/dut.act %/custom.conf
+	@echo "  synth  $(point)"
+	@cd $* && rm -f dut_decomp.act && \
+	if $(call run,synth.log,$(SYNTH_GENUS)) && test -f dut_decomp.act; then \
+	  echo genus > synth.backend; \
+	else \
+	  echo "  synth  $(point): genus failed, retrying with abc"; \
+	  $(call run,synth_abc.log,$(SYNTH_ABC)) && test -f dut_decomp.act && \
+	  echo abc > synth.backend; \
+	fi
+	@touch $@
+
+%/sim.done: %/synth.done %/top_decomp.act %/run.scr
+	@echo "  sim    $(point)"
+	@cd $* && $(call run,sim.log,$(SIM) < run.scr)
+	@touch $@
+
+%/area.done: %/dut.act
+	@echo "  area   $(point)"
+	@mkdir -p $*/area && cp $*/dut.act $*/area/ && cd $*/area && \
+	$(call run,synth_df.log,$(SYNTH_DATAFLOW)) && \
+	$(call run,dflowmap.log,$(DFLOWMAP)) && \
+	test -f df_dut_out/df_dut.stat
+	@touch $@
+
+# The .done files are intermediates of `points`; keep them for collect.
+.SECONDARY:
+
+plot: $(VENV_OK) # Render sim/plots/*.png from sim/csv/*.csv
 	@$(PYTHON) scripts/plot.py
 
 all: quick plot # Quick sweep, then plot
 
-list: # List the modules that can be swept
+list: $(VENV_OK) # List the modules that can be swept
 	@$(PYTHON) -c "import sys; sys.path.insert(0,'scripts'); \
 	 import sweep; [print('  ', m, len(d['points']), 'points') \
 	 for m, d in sweep.MODULES.items()]"
 
 clean: # Remove the per-run synthesis/simulation work dirs
-	@rm -rf sim/work
-	@echo "removed sim/work"
+	@rm -rf $(WORK)
+	@echo "removed $(WORK)"
 
 distclean: clean # Also remove the CSVs and plots
 	@rm -rf sim/plots sim/csv

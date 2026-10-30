@@ -11,22 +11,20 @@
 // completion detected before either branch can fire, and that is real hardware
 // sitting in the critical path on EVERY token, taken or not.
 //
-// Measure it with three processes and one control knob:
+// Measure it with two processes and one control knob:
 //
-//   plain_adder  no selection at all              -- the baseline
-//   cond_adder   selection; CTRL=1 adds, CTRL=0 passes A through
-//   skip_adder   no selection, never adds         -- the other baseline
+//   plain_adder  no selection at all: always OUT!a+b   -- the baseline
+//   cond_adder   [ c=1 -> OUT!a+b [] else -> skip ]
 //
-// Then drive CTRL three ways (see the `mode` sweep knob in scripts/sweep.py):
+// Then drive cond_adder's CTRL three ways (the `mode` knob in scripts/sweep.py):
 //
-//   always  CTRL=1 forever  -> cond_adder vs plain_adder
-//                              = the OVERHEAD OF THE SELECTION, with the adder
-//                                work held constant
-//   never   CTRL=0 forever  -> cond_adder vs skip_adder
-//                              = the same overhead, with no adder work at all
-//   random  CTRL 50/50      -> what a data-dependent branch really costs
-//
-// and `always` vs `never` on cond_adder alone is the cost of the adder path.
+//   always  CTRL=1 forever  -> every token takes the a+b path; vs plain_adder
+//                              this is the OVERHEAD OF THE SELECTION itself,
+//                              with the adder work held constant
+//   never   CTRL=0 forever  -> every token takes the skip path: no output at
+//                              all, just the guard evaluation
+//   random  CTRL 50/50      -> half the tokens each way: what a data-dependent
+//                              branch really costs
 //
 // Sweep knobs: width, mode.
 // ----------------------------------------------------------------------------
@@ -41,23 +39,9 @@ template <pint width> defproc plain_adder(
         int<width> a, b;
         int<1> c;
         chp{
-        // CTRL is still received, so the handshake count matches cond_adder
+        // CTRL is still received, so the handshakes match cond_adder(always)
         // exactly and the only difference left is the selection itself.
         *[ A?a, B?b, CTRL?c; OUT!a+b ]
-        }
-}
-
-// Baseline: never adds, no selection.
-template <pint width> defproc skip_adder(
-    chan?(int<width>) A;
-    chan?(int<width>) B;
-    chan?(int<1>) CTRL;
-    chan!(int<width+1>) OUT
-    ){
-        int<width> a, b;
-        int<1> c;
-        chp{
-        *[ A?a, B?b, CTRL?c; OUT!a ]
         }
 }
 
@@ -74,7 +58,7 @@ template <pint width> defproc cond_adder(
         *[
             A?a, B?b, CTRL?c;
             [ c = 1 -> OUT!a+b
-            [] else -> OUT!a
+            [] else -> skip
             ]
         ]
         }

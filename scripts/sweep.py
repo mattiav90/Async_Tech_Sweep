@@ -1,28 +1,28 @@
 #!/usr/bin/env python3
 """
-Drive the characterization sweep.
+Generate the per-point test benches, and collect results into CSVs.
 
-For every (module, parameter) point this does four things:
+The tools themselves (synth2, actsim, dflowmap) are run by the Makefile, not
+from here. `make sweep` is three steps:
 
-  1. generate a wrapper   `dut.act`  -- a NON-template proc `dut` holding one
-     concrete instance of the module, plus a test bench `tb` that feeds it from
-     harness.act sources and drains it into sinks. The harness sits OUTSIDE
-     `dut` on purpose: synth2 only decomposes `dut`, so only the module under
-     test is back-annotated and charged.
+  1. sweep.py gen       for every (module, parameter) point, write
+                        sim/work/<module>/<tag>/ with
+                          dut.act         a NON-template proc `dut` holding one
+                                          concrete instance of the module, plus a
+                                          test bench `tb` that feeds it from
+                                          harness.act sources and drains it into
+                                          sinks. The harness sits OUTSIDE `dut`
+                                          on purpose: synth2 only decomposes
+                                          `dut`, so only the module under test
+                                          is back-annotated and charged.
+                          top_decomp.act  the same bench around `decomp_dut`
+                          run.scr         the actsim command script
+                        and list the point dirs in sim/work/points.mk.
 
-  2. synthesize           `synth2 -Tgeneric -F decomp -t -p dut dut.act`
-     -> dut_decomp.act (the refined CHP) + decomp_sim.conf (per-action delay
-     and energy tables).
+  2. make points        synthesize, simulate and (optionally) measure area in
+                        every listed dir -- see the tool rules in the Makefile.
 
-  3. simulate             `actsim -ref=1 -cnf=decomp_sim.conf top_decomp.act tb_d`
-     with the decomposed instance swapped in, watching the module's outputs so
-     the log carries timestamps.
-
-  4. optionally measure area via the dataflow flow (synth2 -F dataflow +
-     dflowmap), which is the only path that reports real cell area under
-     -Tgeneric.
-
-Results are appended to sim/<module>.csv, one row per parameter point.
+  3. sweep.py collect   parse each dir into a row of sim/csv/<module>.csv.
 
 Why `dut` is not a template: `synth2 -p "multiplier<8>"` works, but names its
 output `decomp_multiplier_38_4` -- a mangled name that depends on internal
@@ -34,9 +34,7 @@ import argparse
 import csv
 import os
 import shutil
-import subprocess
 import sys
-import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import extract_metrics  # noqa: E402
@@ -68,6 +66,8 @@ def clog2(n):
 #   hookup    connections from test-bench channels to the dut instance `d`
 #   drivers   harness instances (sources and sinks)
 #   watch     dut ports to watch / chcount, i.e. the module's outputs
+#   track     (optional) extra dut ports watched only to time the run, for a
+#             module that may finish without producing any output
 # ============================================================================
 
 
@@ -107,12 +107,16 @@ def w_adder(p, n):
     )
 
 
+# Accumulator guard bits above the 2*width product: room for 2^8 = 256 terms.
+MAC_GUARD = 8
+
+
 def w_mac(p, n):
-    W, K = p["width"], p["terms"]
-    # accw must hold 2*width plus enough guard bits for a K-term accumulation.
-    OW = 2 * W + clog2(K)
-    # The mac has no internal loop: RST pulses every K tokens, which is what
-    # makes an accumulation K terms long.
+    W = p["width"]
+    OW = 2 * W + MAC_GUARD
+    # The sweep is over width only. RST is held at 0, so the accumulation never
+    # restarts: the reset selection is still in the circuit and evaluated on
+    # every token, it just never takes the rst=1 branch.
     return dict(
         imports=["mac.act"],
         ports=f"chan?(int<{W}>) A, B; chan?(int<1>) RST; chan!(int<{OW}>) OUT",
@@ -122,7 +126,7 @@ def w_mac(p, n):
         drivers=[
             f"rand_src<{W}, 2463534242, {n}> sa(a);",
             f"rand_src<{W}, 1013904223, {n}> sb(b);",
-            f"pulse_src<{K}, {n}> sr(rs);",
+            f"const_src<1, 0, {n}> sr(rs);",
             f"nsink<{OW}> k(o);",
         ],
         watch=["d.OUT"],
@@ -260,7 +264,9 @@ def w_xbar_det(p, n):
 
 
 def w_xbar_nd(p, n):
-    W, NI, NO = p["width"], p["inDim"], p["outDim"]
+    # Square only (ports = N x N), so it lines up port-for-port with xbar_det.
+    W = p["width"]
+    NI = NO = p["ports"]
     SW = clog2(NO)
     drivers = [f"rand_src<{W}, 2463534242, {n}> sa[{NI}];",
                f"(i : {NI} : sa[i].O = a[i];)"]
@@ -289,8 +295,10 @@ def w_xbar_nd(p, n):
 def w_cond_select(p, n):
     """Selection overhead: `variant` picks the process, `mode` drives CTRL.
 
-    plain_adder / skip_adder have no selection but still consume CTRL, so the
-    handshake count is identical and the only difference left is the `[ ]`.
+    cond_adder is [ c=1 -> OUT!a+b [] else -> skip ]; plain_adder always does
+    OUT!a+b but still consumes CTRL, so against cond_adder(always) the only
+    difference left is the `[ ]`. On the skip path nothing is sent, so the run
+    is timed (and checked) on CTRL, which every iteration receives.
     """
     W, variant, mode = p["width"], p["variant"], p["mode"]
     ctrl = {
@@ -311,6 +319,7 @@ def w_cond_select(p, n):
             f"nsink<{W+1}> k(o);",
         ],
         watch=["d.OUT"],
+        track=["d.CTRL"],
         ops=n,
     )
 
@@ -327,45 +336,45 @@ def grid(**axes):
     return out
 
 
+# Every curve gets 6 points along its x-axis (the knob plot.py puts there);
+# series/facet axes stay at <= 3 values, the most plot.py draws per panel.
 MODULES = {
-    "multiplier":     dict(build=w_multiplier,     points=grid(width=[4, 6, 8, 12, 16])),
-    "adder":          dict(build=w_adder,          points=grid(width=[4, 8, 16, 24, 32])),
-    "mac":            dict(build=w_mac,            points=grid(width=[4, 8], terms=[4, 8, 16])),
-    "buffer":         dict(build=w_buffer,         points=grid(width=[8], depth=[1, 2, 4, 8, 16])),
-    "copy":           dict(build=w_copy,           points=grid(width=[8], outDim=[2, 3, 4, 6, 8])),
-    "split":          dict(build=w_split,          points=grid(width=[8], outDim=[2, 3, 4, 6, 8])),
-    "det_merge":      dict(build=w_det_merge,      points=grid(width=[8], inDim=[2, 3, 4, 6, 8])),
-    "non_det_merge":  dict(build=w_non_det_merge,  points=grid(width=[8], inDim=[2, 3, 4, 6, 8])),
-    # The crossbar is the headline sweep: ports x width x (det vs probe).
-    # Selection overhead. plain/skip are the no-selection baselines; `mode`
-    # pins CTRL so the adder path is always / never / randomly taken.
+    "multiplier":     dict(build=w_multiplier,     points=grid(width=[4, 6, 8, 10, 12, 16])),
+    "adder":          dict(build=w_adder,          points=grid(width=[4, 8, 12, 16, 24, 32])),
+    "mac":            dict(build=w_mac,            points=grid(width=[4, 6, 8, 10, 12, 16])),
+    "buffer":         dict(build=w_buffer,         points=grid(width=[8], depth=[2, 4, 6, 8, 12, 16])),
+    "copy":           dict(build=w_copy,           points=grid(width=[8], outDim=[2, 4, 6, 8, 12, 16])),
+    "split":          dict(build=w_split,          points=grid(width=[8], outDim=[2, 4, 6, 8, 12, 16])),
+    "det_merge":      dict(build=w_det_merge,      points=grid(width=[8], inDim=[2, 4, 6, 8, 12, 16])),
+    "non_det_merge":  dict(build=w_non_det_merge,  points=grid(width=[8], inDim=[2, 4, 6, 8, 12, 16])),
+    # Selection overhead. `mode` pins cond_adder's CTRL so the a+b path is
+    # taken always / never (skip) / half the time; plain_adder is the
+    # no-selection baseline.
     "cond_select":    dict(build=w_cond_select, points=[
         dict(width=w, variant=v, mode=m)
         for w in (8, 16)
         for v, m in (("cond_adder", "always"), ("cond_adder", "never"),
-                     ("cond_adder", "random"), ("plain_adder", "always"),
-                     ("skip_adder", "never"))]),
-    "xbar_det":       dict(build=w_xbar_det,       points=grid(width=[4, 8], ports=[2, 4, 8])),
-    "xbar_nd":        dict(build=w_xbar_nd,        points=grid(width=[4, 8], inDim=[2, 4, 8], outDim=[2, 4, 8])),
+                     ("cond_adder", "random"), ("plain_adder", "always"))]),
+    # The crossbar is the headline sweep: ports x width x (det vs probe).
+    "xbar_det":       dict(build=w_xbar_det,       points=grid(width=[4, 8], ports=[2, 4, 6, 8, 12, 16])),
+    "xbar_nd":        dict(build=w_xbar_nd,        points=grid(width=[4, 8], ports=[2, 4, 6, 8, 12, 16])),
 }
 
-# A fast subset, for checking the flow works before committing to the full run.
-QUICK = {
-    "multiplier":     grid(width=[4, 8]),
-    "adder":          grid(width=[4, 8]),
-    "mac":            grid(width=[4], terms=[4]),
-    "buffer":         grid(width=[8], depth=[1, 4]),
-    "copy":           grid(width=[8], outDim=[2, 4]),
-    "split":          grid(width=[8], outDim=[2, 4]),
-    "det_merge":      grid(width=[8], inDim=[2, 4]),
-    "non_det_merge":  grid(width=[8], inDim=[2, 4]),
-    "cond_select":    [dict(width=8, variant=v, mode=m)
-                       for v, m in (("cond_adder", "always"),
-                                    ("cond_adder", "never"),
-                                    ("plain_adder", "always"))],
-    "xbar_det":       grid(width=[4], ports=[2, 4]),
-    "xbar_nd":        grid(width=[4], inDim=[2], outDim=[2, 4]),
-}
+
+def pin(module, **fixed):
+    """MODULES[module]'s points with some axes held at a single value."""
+    return [p for p in MODULES[module]["points"]
+            if all(p[k] == v for k, v in fixed.items())]
+
+
+# A faster subset: the full x-axis of every curve, but only one value of each
+# secondary axis, so every plot still gets its 6 points.
+QUICK = {m: d["points"] for m, d in MODULES.items()}
+QUICK.update(
+    cond_select=pin("cond_select", width=8),
+    xbar_det=pin("xbar_det", width=4),
+    xbar_nd=pin("xbar_nd", width=4),
+)
 
 
 # ============================================================================
@@ -414,11 +423,12 @@ def _tb(name, dut_type, spec):
 
 def emit_script(spec, path):
     """actsim command script: watch outputs, run, count tokens, dump energy."""
+    chans = spec["watch"] + spec.get("track", [])
     L = []
-    for w in spec["watch"]:
+    for w in chans:
         L.append(f"watch {w}")
     L.append("cycle")
-    for w in spec["watch"]:
+    for w in chans:
         L.append(f"chcount {w}")
     L.append("energy -v energy.txt")
     L.append("exit")
@@ -427,115 +437,124 @@ def emit_script(spec, path):
 
 
 # ============================================================================
-# Running
+# gen / collect
 # ============================================================================
-
-def run(cmd, cwd, log, env, timeout):
-    """Run a tool, tee its output to `log`, return (ok, seconds)."""
-    t0 = time.time()
-    try:
-        r = subprocess.run(cmd, cwd=cwd, env=env, timeout=timeout,
-                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        out = r.stdout.decode(errors="replace")
-        ok = r.returncode == 0
-    except subprocess.TimeoutExpired as e:
-        out = (e.output or b"").decode(errors="replace") + f"\n*** TIMEOUT after {timeout}s\n"
-        ok = False
-    with open(log, "w") as f:
-        f.write(" ".join(cmd) + "\n\n" + out)
-    return ok, time.time() - t0
-
 
 def tag_of(params):
     return "_".join(f"{k}{v}" for k, v in sorted(params.items()))
 
 
-def run_point(module, spec_fn, params, n, tech, timeout, do_area, env_base):
-    tag = tag_of(params)
-    wd = os.path.join(WORK, module, tag)
-    shutil.rmtree(wd, ignore_errors=True)
-    os.makedirs(wd, exist_ok=True)
+def point_dir(module, params):
+    return os.path.join(WORK, module, tag_of(params))
 
-    spec = spec_fn(params, n)
-    emit_wrapper(spec, os.path.join(wd, "dut.act"))
-    emit_script(spec, os.path.join(wd, "run.scr"))
 
-    env = dict(env_base)
-    # ACT_PATH lets the generated wrapper say `import "multiplier.act"` instead
-    # of carrying a brittle relative path.
-    env["ACT_PATH"] = SRC + ":" + env.get("ACT_PATH", "")
+def selected(args):
+    """[(module, [params, ...])] picked by --module / --quick."""
+    names = args.module or list(MODULES)
+    bad = [m for m in names if m not in MODULES]
+    if bad:
+        sys.exit(f"unknown module(s): {bad}\nknown: {list(MODULES)}")
+    return [(m, QUICK[m] if args.quick else MODULES[m]["points"]) for m in names]
+
+
+def gen(args):
+    """Write a fresh work dir per point, and list them in sim/work/points.mk."""
+    dirs = []
+    for module, pts in selected(args):
+        build = MODULES[module]["build"]
+        for params in pts:
+            wd = point_dir(module, params)
+            # Start clean so no stage result from an older run survives.
+            shutil.rmtree(wd, ignore_errors=True)
+            os.makedirs(wd)
+            spec = build(params, args.inputs)
+            emit_wrapper(spec, os.path.join(wd, "dut.act"))
+            emit_top_decomp(spec, os.path.join(wd, "top_decomp.act"))
+            emit_script(spec, os.path.join(wd, "run.scr"))
+            dirs.append(os.path.relpath(wd, REPO))
+    with open(os.path.join(WORK, "points.mk"), "w") as f:
+        f.write("# Written by `sweep.py gen`: the point dirs `make points` runs.\n")
+        f.write("POINTS := \\\n  " + " \\\n  ".join(dirs) + "\n")
+    print(f"generated {len(dirs)} point(s) in {os.path.relpath(WORK, REPO)}/")
+
+
+def read_time(path):
+    """Wall seconds from a `/usr/bin/time -f %e` file (last line), else 0."""
+    try:
+        with open(path) as f:
+            return float(f.read().split()[-1])
+    except (OSError, ValueError, IndexError):
+        return 0.0
+
+
+def collect_point(module, params, n, tech):
+    """One CSV row from the stage outputs the Makefile left in the point dir.
+
+    Each stage touches a `<stage>.done` file only when it succeeded, so a
+    missing one is how a failure shows up here.
+    """
+    wd = point_dir(module, params)
+    has = lambda f: os.path.exists(os.path.join(wd, f))  # noqa: E731
+    spec = MODULES[module]["build"](params, n)
 
     row = dict(module=module, **params)
     row["inputs_per_source"] = n
     row["tech"] = tech
-
-    # ---- 1. decompose the DUT ------------------------------------------------
-    ok, t = run(["synth2", f"-T{tech}", "-o", "dut_decomp.act", "-F", "decomp",
-                 "-t", "-p", "dut", "dut.act"],
-                wd, os.path.join(wd, "synth.log"), env, timeout)
-    row["synth_s"] = round(t, 1)
-    if not ok or not os.path.exists(os.path.join(wd, "dut_decomp.act")):
+    # synth.time is the Genus attempt, synth_abc.time the fallback if it ran.
+    row["synth_s"] = round(read_time(os.path.join(wd, "synth.time"))
+                           + read_time(os.path.join(wd, "synth_abc.time")), 1)
+    if has("synth.backend"):
+        with open(os.path.join(wd, "synth.backend")) as f:
+            row["synth_backend"] = f.read().strip()
+    if not has("synth.done"):
         row["status"] = "SYNTH_FAIL"
         return row
+    row["sim_s"] = round(read_time(os.path.join(wd, "sim.time")), 1)
 
-    # ---- 2. simulate the decomposed DUT -------------------------------------
-    emit_top_decomp(spec, os.path.join(wd, "top_decomp.act"))
-    with open(os.path.join(wd, "run.scr")) as f:
-        scr = f.read()
-    t0 = time.time()
-    try:
-        r = subprocess.run(
-            ["actsim", "-ref=1", "-Wlang_subst:off", "-cnf=decomp_sim.conf",
-             "top_decomp.act", "tb_d"],
-            cwd=wd, env=env, input=scr.encode(), timeout=timeout,
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        out = r.stdout.decode(errors="replace")
-        sim_ok = r.returncode == 0
-    except subprocess.TimeoutExpired as e:
-        out = (e.output or b"").decode(errors="replace") + "\n*** SIM TIMEOUT\n"
-        sim_ok = False
-    with open(os.path.join(wd, "sim.log"), "w") as f:
-        f.write(out)
-    row["sim_s"] = round(time.time() - t0, 1)
-
-    # ---- 3. optional area pass via the dataflow flow ------------------------
     area_stat = None
-    if do_area:
-        awd = os.path.join(wd, "area")
-        os.makedirs(awd, exist_ok=True)
-        shutil.copy(os.path.join(wd, "dut.act"), awd)
-        a_ok, _ = run(["synth2", f"-T{tech}", "-o", "df_dut.act", "-F", "dataflow",
-                       "-p", "dut", "dut.act"],
-                      awd, os.path.join(awd, "synth_df.log"), env, timeout)
-        if a_ok and os.path.exists(os.path.join(awd, "df_dut.act")):
-            run(["dflowmap", f"-T{tech}", "-s", "abc", "-ref=1", "-f", "qdi",
-                 "-c", "bd", "-M", "8", "-p", "df_dut", "df_dut.act"],
-                awd, os.path.join(awd, "dflowmap.log"), env, timeout)
-            cand = os.path.join(awd, "df_dut_out", "df_dut.stat")
-            if os.path.exists(cand):
-                area_stat = cand
+    if has("area.done"):
+        area_stat = os.path.join(wd, "area", "df_dut_out", "df_dut.stat")
 
-    # ---- 4. parse ------------------------------------------------------------
     m = extract_metrics.collect(wd, area_stat, ops=spec.get("ops"))
-    m.pop("chcounts", None)
+    # tokens counts outputs only; `track` channels just prove the run happened.
+    counts = m.pop("chcounts", None) or {}
+    m["tokens"] = sum(v for c, v in counts.items() if c in spec["watch"])
+    ran = m["tokens"] or any(counts.get(c) for c in spec.get("track", []))
     if spec.get("composite") and "area_um2" in m:
         # See the note on `composite` above: the number is an undercount, so
         # drop it rather than plot something wrong.
         m["area_note"] = f"dropped {m.pop('area_um2')}: arrayed sub-instances undercounted"
     row.update(m)
-    row["status"] = "OK" if (sim_ok and m.get("tokens")) else "SIM_FAIL"
+    row["status"] = "OK" if (has("sim.done") and ran) else "SIM_FAIL"
     return row
 
 
+def collect(args):
+    for module, pts in selected(args):
+        print(f"\n=== {module}: {len(pts)} point(s) ===")
+        rows = []
+        for params in pts:
+            row = collect_point(module, params, args.inputs, args.tech)
+            rows.append(row)
+            d = row.get("delay_per_op_ps")
+            e = row.get("energy_per_op_fJ")
+            a = row.get("area_um2")
+            print(f"  {tag_of(params):<40} {row['status']:<10} "
+                  f"delay/op={d if d is None else round(d, 1)} ps  "
+                  f"E/op={e if e is None else round(e, 2)} fJ  "
+                  f"area={a} um2")
+        print(f"  -> {os.path.relpath(write_csv(module, rows), REPO)}")
+
+
 # Column order: identity first, then the three things we actually plot.
-COLS = ["module", "tech", "status", "width", "depth", "terms", "ports",
+COLS = ["module", "tech", "status", "width", "depth", "ports",
         "inDim", "outDim", "variant", "mode",
         "inputs_per_source", "ops", "tokens",
         "total_delay_ps", "delay_per_op_ps",
         "dynamic_energy_fJ", "energy_per_op_fJ",
         "leakage_power_W", "leakage_energy_fJ", "total_energy_fJ",
         "area_um2", "area_note", "actsim_area", "dflow_leak_power",
-        "synth_s", "sim_s"]
+        "synth_backend", "synth_s", "sim_s"]
 
 
 def write_csv(module, rows):
@@ -550,48 +569,27 @@ def write_csv(module, rows):
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--module", action="append",
-                    help="module to sweep (repeatable); default: all")
-    ap.add_argument("-n", "--inputs", type=int, default=30,
-                    help="tokens generated per source (default 30)")
-    ap.add_argument("--tech", default=TECH_DEFAULT)
-    ap.add_argument("--timeout", type=int, default=1800,
-                    help="per-tool timeout in seconds")
-    ap.add_argument("--quick", action="store_true",
-                    help="small parameter subset, to smoke-test the flow")
-    ap.add_argument("--no-area", action="store_true",
-                    help="skip the dataflow+dflowmap area pass")
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--module", action="append",
+                        help="module to sweep (repeatable); default: all")
+    common.add_argument("-n", "--inputs", type=int, default=30,
+                        help="tokens generated per source (default 30)")
+    common.add_argument("--quick", action="store_true",
+                        help="the QUICK subset instead of the full sweep")
+
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("gen", parents=[common],
+                   help="write the per-point work dirs + sim/work/points.mk")
+    c = sub.add_parser("collect", parents=[common],
+                       help="parse the work dirs into sim/csv/<module>.csv")
+    c.add_argument("--tech", default=TECH_DEFAULT,
+                   help="technology recorded in the CSV")
     args = ap.parse_args()
 
-    names = args.module or list(MODULES)
-    bad = [m for m in names if m not in MODULES]
-    if bad:
-        sys.exit(f"unknown module(s): {bad}\nknown: {list(MODULES)}")
-    if args.quick:
-        names = [m for m in names if m in QUICK]
-
-    env_base = dict(os.environ)
     os.makedirs(WORK, exist_ok=True)
-
-    for module in names:
-        pts = QUICK[module] if args.quick else MODULES[module]["points"]
-        build = MODULES[module]["build"]
-        rows = []
-        print(f"\n=== {module}: {len(pts)} point(s) ===", flush=True)
-        for params in pts:
-            print(f"  {tag_of(params)} ... ", end="", flush=True)
-            row = run_point(module, build, params, args.inputs, args.tech,
-                            args.timeout, not args.no_area, env_base)
-            rows.append(row)
-            d = row.get("delay_per_op_ps")
-            e = row.get("energy_per_op_fJ")
-            a = row.get("area_um2")
-            print(f"{row['status']}  "
-                  f"delay/op={d if d is None else round(d,1)} ps  "
-                  f"E/op={e if e is None else round(e,2)} fJ  "
-                  f"area={a} um2", flush=True)
-        print(f"  -> {write_csv(module, rows)}")
+    gen(args) if args.cmd == "gen" else collect(args)
 
 
 if __name__ == "__main__":
