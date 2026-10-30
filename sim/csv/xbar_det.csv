@@ -1,0 +1,3 @@
+module,tech,status,width,depth,terms,ports,inDim,outDim,variant,mode,inputs_per_source,ops,tokens,total_delay_ps,delay_per_op_ps,dynamic_energy_fJ,energy_per_op_fJ,leakage_power_W,leakage_energy_fJ,total_energy_fJ,area_um2,area_note,actsim_area,dflow_leak_power,synth_s,sim_s
+xbar_det,generic,OK,4,,,2,,,,,30,60,60,26509,441.81666666666666,0.0,0.0,0.0,0.0,0.0,,dropped 345.0: arrayed sub-instances undercounted,0.0,9.0,2.5,1.5
+xbar_det,generic,OK,4,,,4,,,,,30,120,120,26389,219.90833333333333,0.0,0.0,0.0,0.0,0.0,,dropped 587.0: arrayed sub-instances undercounted,0.0,11.0,2.2,1.6

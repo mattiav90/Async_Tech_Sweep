@@ -1,0 +1,17 @@
+totalArea: 12408.00, totalLeakPowewr: 3.00
+Merge area: 0.00, ratio:   0.0
+Split area: 0.00, ratio:   0.0
+Merge LeakPower: 0.00, ratio:   0.0
+Split LeakPower: 0.00, ratio:   0.0
+Area Statistics:
+totalArea: 12408.00
+instance name      area     percentage     # of instances
+                                                                 func_01sW8W8W16 12022.00  96.9     1
+                                                                    func_0W16W16 385.00   3.1     1
+
+Leak Power Statistics:
+totalLeakPower: 3.00
+                                                                    func_0W16W16   1.0  33.3     1
+                                                                 func_01sW8W8W16   1.0  33.3     1
+                                                                    lib::sink<1>   1.0  33.3     1
+

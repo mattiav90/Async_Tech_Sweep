@@ -1,0 +1,22 @@
+import std;
+import "harness.act";
+
+import "adder.act";
+
+defproc dut (chan?(int<4>) A, B; chan!(int<5>) OUT)
+{
+  adder<4> m(A, B, OUT);
+}
+
+defproc tb ()
+{
+  chan(int<4>) a, b;
+  chan(int<5>) o;
+  dut d;
+  d.A = a;
+  d.B = b;
+  d.OUT = o;
+  rand_src<4, 2463534242, 30> sa(a);
+  rand_src<4, 1013904223, 30> sb(b);
+  nsink<5> k(o);
+}

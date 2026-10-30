@@ -1,0 +1,38 @@
+// this is a multiply-accumulate
+// ----------------------------------------------------------------------------
+// One product per handshake, no internal loop. A RST control channel arrives
+// with every operand pair:
+//
+//   rst = 1 -> start a new accumulation: acc := a*b   (the old sum is dropped)
+//   rst = 0 -> keep going:               acc := acc + a*b
+//
+// so the length of an accumulation is decided by whoever drives RST, not baked
+// into the hardware. acc is emitted every cycle, so a consumer can either take
+// the running sum or ignore everything but the last one.
+//
+// accw is the accumulator width; it must be at least 2*width, plus however many
+// guard bits the longest expected accumulation needs.
+//
+// Sweep knobs: width, accw.
+// ----------------------------------------------------------------------------
+
+template <pint width; pint accw> defproc mac(
+    chan?(int<width>) A;
+    chan?(int<width>) B;
+    chan?(int<1>) RST;
+    chan!(int<accw>) OUT
+    ){
+        int<width> a, b;
+        int<accw> acc;
+        int<1> rst;
+        chp{
+        acc := 0;
+        *[
+            A?a, B?b, RST?rst;
+            [ rst = 1 -> acc := a*b
+            [] else   -> acc := acc + a*b
+            ];
+            OUT!acc
+        ]
+        }
+}

@@ -1,0 +1,84 @@
+/* -- declarations -- */
+export defproc func_01pW4W4W5_logictmp (bool? x0_50_6; bool? x0_51_6; bool? x0_52_6; bool? x0_53_6; bool? x1_50_6; bool? x1_51_6; bool? x1_52_6; bool? x1_53_6; bool! out0_50_6; bool! out0_51_6; bool! out0_52_6; bool! out0_53_6; bool! out0_54_6);
+export defproc func_01pW4W4W5_logic (bool? x0[4]; bool? x1[4]; bool! out0[5]);
+
+export defproc func_01pW4W4W5_logictmp (bool? x0_50_6; bool? x0_51_6; bool? x0_52_6; bool? x0_53_6; bool? x1_50_6; bool? x1_51_6; bool? x1_52_6; bool? x1_53_6; bool! out0_50_6; bool! out0_51_6; bool! out0_52_6; bool! out0_53_6; bool! out0_54_6)
+{
+  spec { hazard(*) }
+
+   /*--- types ---*/
+   bool new_n23;
+   syn::NAND2X1 g00;
+   bool new_n14;
+   syn::NAND2X1 g10;
+   bool new_n27;
+   bool new_n18;
+   syn::NAND2X1 g08;
+   syn::NOR2X1 g14;
+   syn::XNOR2X1 g05;
+   syn::OAI21X1 g17;
+   syn::XOR2X1 g04;
+   syn::XNOR2X1 g11;
+   syn::NOR2X1 g03;
+   bool new_n17;
+   syn::AND2X1 g07;
+   bool new_n26;
+   syn::NAND2X1 g02;
+   bool new_n16;
+   syn::XOR2X1 g15;
+   bool new_n28;
+   bool new_n29;
+   syn::OR2X1 g09;
+   bool new_n22;
+   syn::XNOR2X1 g16;
+   syn::XOR2X1 g01;
+   bool new_n20;
+   syn::NAND2X1 g13;
+   syn::OAI21X1 g06;
+   bool new_n21;
+   syn::AOI21X1 g12;
+   bool new_n24;
+   /*--- connections ---*/
+   g00(.A=x0_50_6, .B=x1_50_6, .Y=new_n14);
+   g01(.A=x0_50_6, .B=x1_50_6, .Y=out0_50_6);
+   g02(.A=x0_51_6, .B=x1_51_6, .Y=new_n16);
+   g03(.A=x0_51_6, .B=x1_51_6, .Y=new_n17);
+   g04(.A=x0_51_6, .B=x1_51_6, .Y=new_n18);
+   g05(.A=new_n14, .B=new_n18, .Y=out0_51_6);
+   g06(.A=new_n14, .B=new_n17, .C=new_n16, .Y=new_n20);
+   g07(.A=x0_52_6, .B=x1_52_6, .Y=new_n21);
+   g08(.A=x0_52_6, .B=x1_52_6, .Y=new_n22);
+   g09(.A=x0_52_6, .B=x1_52_6, .Y=new_n23);
+   g10(.A=new_n22, .B=new_n23, .Y=new_n24);
+   g11(.A=new_n20, .B=new_n24, .Y=out0_52_6);
+   g12(.A=new_n20, .B=new_n23, .C=new_n21, .Y=new_n26);
+   g13(.A=x0_53_6, .B=x1_53_6, .Y=new_n27);
+   g14(.A=x0_53_6, .B=x1_53_6, .Y=new_n28);
+   g15(.A=x0_53_6, .B=x1_53_6, .Y=new_n29);
+   g16(.A=new_n26, .B=new_n29, .Y=out0_53_6);
+   g17(.A=new_n26, .B=new_n28, .C=new_n27, .Y=out0_54_6);
+}
+
+export defproc func_01pW4W4W5_logic (bool? x0[4]; bool? x1[4]; bool! out0[5])
+{
+  spec { hazard(*) }
+
+   /*--- types ---*/
+   bool x0_50_6;
+   bool out0_51_6;
+   func_01pW4W4W5_logictmp _passthru_;
+   bool x0_53_6;
+   bool x1_51_6;
+   bool x0_51_6;
+   bool out0_54_6;
+   bool x1_52_6;
+   bool out0_50_6;
+   bool out0_53_6;
+   bool x1_53_6;
+   bool x0_52_6;
+   bool out0_52_6;
+   bool x1_50_6;
+   /*--- connections ---*/
+   _passthru_(.x0_50_6=x0[0], .x0_51_6=x0[1], .x0_52_6=x0[2], .x0_53_6=x0[3], .x1_50_6=x1[0], .x1_51_6=x1[1], .x1_52_6=x1[2], .x1_53_6=x1[3], .out0_50_6=out0[0], .out0_51_6=out0[1], .out0_52_6=out0[2], .out0_53_6=out0[3], .out0_54_6=out0[4]);
+}
+

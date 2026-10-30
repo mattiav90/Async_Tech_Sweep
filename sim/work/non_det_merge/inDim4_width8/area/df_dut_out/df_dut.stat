@@ -1,0 +1,12 @@
+totalArea: 0.00, totalLeakPowewr: 0.00
+Merge area: 0.00, ratio:   nan
+Split area: 0.00, ratio:   nan
+Merge LeakPower: 0.00, ratio:   nan
+Split LeakPower: 0.00, ratio:   nan
+Area Statistics:
+totalArea: 0.00
+instance name      area     percentage     # of instances
+
+Leak Power Statistics:
+totalLeakPower: 0.00
+

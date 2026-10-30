@@ -1,1 +1,13 @@
-//this is an adder
+// this is an adder
+// Sweep knob: width. OUT is width+1 bits so the carry-out is kept.
+
+template <pint width> defproc adder(
+    chan?(int<width>) A;
+    chan?(int<width>) B;
+    chan!(int<width+1>) OUT
+    ){
+        int<width> a, b;
+        chp{
+        *[A?a, B?b; OUT!a+b ]
+        }
+}

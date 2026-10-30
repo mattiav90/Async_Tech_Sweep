@@ -1,0 +1,61 @@
+import globals;
+import std;
+import std::cells;
+import std::dflow::lib; 
+
+open std;
+open std::cells;
+open std::dflow;
+
+namespace globals {
+}
+
+namespace syn {
+}
+
+defproc func_0i3ei30i2ei20i1hi0e0i1I1i1eI0i0qBi1i0qqqW2W2(chan?(int<2>)in0; chan!(int<2>) out0) {
+  int<2> x0;
+  int<1> res0;
+  int<1> res1;
+  int<2> res2;
+  int<1> res3;
+  int<1> res4;
+  int<1> res5;
+  int<1> res6;
+  int<2> res7;
+  int<2> res8;
+  int<2> res9; /* out */
+  chp {
+    *[
+      in0?x0;
+      log("receive (", x0, ")");
+      res0 := int(x0 = int(0x3,2));
+      res1 := int(x0 = int(0x2,2));
+      res2 := x0 >> int(0x1,1);
+      res3 := int(res2 = int(0x0,1));
+      res4 := x0{0..0};
+      res5 := int(res4 = int(0x1,1));
+      res6 := bool(res3) ? res5 : int(0x0,1);
+      res7 := bool(res6) ? int(0x1,2) : int(0x0,2);
+      res8 := bool(res1) ? int(0x2,2) : res7;
+      res9 := bool(res0) ? int(0x3,2) : res8;
+      out0!res9;
+      log("send (", res9, ",", ")")
+    ]
+  }
+}
+
+defproc func_0W4W4(chan?(int<4>)in0; chan!(int<4>) out0) {
+  int<4> x0;
+  int<4> res0; /* out */
+  chp {
+    *[
+      in0?x0;
+      log("receive (", x0, ")");
+      res0 := x0;
+      out0!res0;
+      log("send (", res0, ",", ")")
+    ]
+  }
+}
+

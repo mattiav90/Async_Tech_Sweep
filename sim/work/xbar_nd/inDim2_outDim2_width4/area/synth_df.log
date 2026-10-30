@@ -1,0 +1,3 @@
+synth2 -Tgeneric -o df_dut.act -F dataflow -p dut dut.act
+
+WARNING: Skipped dataflow generation for non_det_merge<4,2>; probes found.

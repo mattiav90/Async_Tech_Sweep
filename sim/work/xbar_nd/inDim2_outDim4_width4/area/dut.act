@@ -1,0 +1,26 @@
+import std;
+import "harness.act";
+
+import "crossbar.act";
+
+defproc dut (chan?(int<4>) IN[2]; chan?(int<2>) DST[2]; chan!(int<4>) OUT[4])
+{
+  xbar_nd<4, 2, 4> m(IN, DST, OUT);
+}
+
+defproc tb ()
+{
+  chan(int<4>) a[2];
+  chan(int<2>) ds[2];
+  chan(int<4>) o[4];
+  dut d;
+  (i : 2 : d.IN[i] = a[i];)
+  (i : 2 : d.DST[i] = ds[i];)
+  (i : 4 : d.OUT[i] = o[i];)
+  rand_src<4, 2463534242, 30> sa[2];
+  (i : 2 : sa[i].O = a[i];)
+  rand_mod<2, 4, 1013904223, 30> dm0(ds[0]);
+  rand_mod<2, 4, 1013912142, 30> dm1(ds[1]);
+  nsink<4> k[4];
+  (i : 4 : o[i] = k[i].I;)
+}

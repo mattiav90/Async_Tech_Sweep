@@ -1,1 +1,26 @@
-//this is a det_merge
+// this is a det_merge
+// ----------------------------------------------------------------------------
+// Deterministic (controlled) merge: an external SEL channel says which input to
+// take, so there is NO arbitration and NO probe. The guard is a plain n-way
+// select on a value that has already arrived. Compare against non_det_merge to
+// see what arbitration actually costs.
+//
+// Sweep knobs: width, inDim.
+// ----------------------------------------------------------------------------
+import std;
+
+template <pint width; pint inDim> defproc det_merge(
+    chan?(int<width>) IN[inDim];
+    chan?(int<std::ceil_log2(inDim)>) SEL;
+    chan!(int<width>) OUT
+    ){
+        int<width> v;
+        int<std::ceil_log2(inDim)> s;
+        chp{
+        *[
+            SEL?s;
+            [ ([] i : inDim : s = i -> IN[i]?v ) ];
+            OUT!v
+        ]
+        }
+}

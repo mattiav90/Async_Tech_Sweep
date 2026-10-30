@@ -1,0 +1,92 @@
+[                  20] <k>  d.OUT: recv-blocked
+[                3764] <d.m>  d.OUT : send value: 99 (0x63)
+[                3764] <k>  d.OUT: recv-wakeup value: 99 (0x63)   [by d.m]
+[                3784] <k>  d.OUT: recv-blocked
+[                8445] <d.m>  d.OUT : send value: 122 (0x7a)
+[                8445] <k>  d.OUT: recv-wakeup value: 122 (0x7a)   [by d.m]
+[                8465] <k>  d.OUT: recv-blocked
+[               13126] <d.m>  d.OUT : send value: 160 (0xa0)
+[               13126] <k>  d.OUT: recv-wakeup value: 160 (0xa0)   [by d.m]
+[               13146] <k>  d.OUT: recv-blocked
+[               17807] <d.m>  d.OUT : send value: 126 (0x7e)
+[               17807] <k>  d.OUT: recv-wakeup value: 126 (0x7e)   [by d.m]
+[               17827] <k>  d.OUT: recv-blocked
+[               22488] <d.m>  d.OUT : send value: 225 (0xe1)
+[               22488] <k>  d.OUT: recv-wakeup value: 225 (0xe1)   [by d.m]
+[               22508] <k>  d.OUT: recv-blocked
+[               27169] <d.m>  d.OUT : send value: 234 (0xea)
+[               27169] <k>  d.OUT: recv-wakeup value: 234 (0xea)   [by d.m]
+[               27189] <k>  d.OUT: recv-blocked
+[               31850] <d.m>  d.OUT : send value: 242 (0xf2)
+[               31850] <k>  d.OUT: recv-wakeup value: 242 (0xf2)   [by d.m]
+[               31870] <k>  d.OUT: recv-blocked
+[               36531] <d.m>  d.OUT : send value: 61 (0x3d)
+[               36531] <k>  d.OUT: recv-wakeup value: 61 (0x3d)   [by d.m]
+[               36551] <k>  d.OUT: recv-blocked
+[               41212] <d.m>  d.OUT : send value: 199 (0xc7)
+[               41212] <k>  d.OUT: recv-wakeup value: 199 (0xc7)   [by d.m]
+[               41232] <k>  d.OUT: recv-blocked
+[               45893] <d.m>  d.OUT : send value: 57 (0x39)
+[               45893] <k>  d.OUT: recv-wakeup value: 57 (0x39)   [by d.m]
+[               45913] <k>  d.OUT: recv-blocked
+[               50574] <d.m>  d.OUT : send value: 109 (0x6d)
+[               50574] <k>  d.OUT: recv-wakeup value: 109 (0x6d)   [by d.m]
+[               50594] <k>  d.OUT: recv-blocked
+[               55255] <d.m>  d.OUT : send value: 13 (0xd)
+[               55255] <k>  d.OUT: recv-wakeup value: 13 (0xd)   [by d.m]
+[               55275] <k>  d.OUT: recv-blocked
+[               59936] <d.m>  d.OUT : send value: 166 (0xa6)
+[               59936] <k>  d.OUT: recv-wakeup value: 166 (0xa6)   [by d.m]
+[               59956] <k>  d.OUT: recv-blocked
+[               64617] <d.m>  d.OUT : send value: 120 (0x78)
+[               64617] <k>  d.OUT: recv-wakeup value: 120 (0x78)   [by d.m]
+[               64637] <k>  d.OUT: recv-blocked
+[               69298] <d.m>  d.OUT : send value: 22 (0x16)
+[               69298] <k>  d.OUT: recv-wakeup value: 22 (0x16)   [by d.m]
+[               69318] <k>  d.OUT: recv-blocked
+[               73979] <d.m>  d.OUT : send value: 128 (0x80)
+[               73979] <k>  d.OUT: recv-wakeup value: 128 (0x80)   [by d.m]
+[               73999] <k>  d.OUT: recv-blocked
+[               78660] <d.m>  d.OUT : send value: 5 (0x5)
+[               78660] <k>  d.OUT: recv-wakeup value: 5 (0x5)   [by d.m]
+[               78680] <k>  d.OUT: recv-blocked
+[               83341] <d.m>  d.OUT : send value: 18 (0x12)
+[               83341] <k>  d.OUT: recv-wakeup value: 18 (0x12)   [by d.m]
+[               83361] <k>  d.OUT: recv-blocked
+[               88022] <d.m>  d.OUT : send value: 58 (0x3a)
+[               88022] <k>  d.OUT: recv-wakeup value: 58 (0x3a)   [by d.m]
+[               88042] <k>  d.OUT: recv-blocked
+[               92703] <d.m>  d.OUT : send value: 167 (0xa7)
+[               92703] <k>  d.OUT: recv-wakeup value: 167 (0xa7)   [by d.m]
+[               92723] <k>  d.OUT: recv-blocked
+[               97384] <d.m>  d.OUT : send value: 78 (0x4e)
+[               97384] <k>  d.OUT: recv-wakeup value: 78 (0x4e)   [by d.m]
+[               97404] <k>  d.OUT: recv-blocked
+[              102065] <d.m>  d.OUT : send value: 222 (0xde)
+[              102065] <k>  d.OUT: recv-wakeup value: 222 (0xde)   [by d.m]
+[              102085] <k>  d.OUT: recv-blocked
+[              106746] <d.m>  d.OUT : send value: 159 (0x9f)
+[              106746] <k>  d.OUT: recv-wakeup value: 159 (0x9f)   [by d.m]
+[              106766] <k>  d.OUT: recv-blocked
+[              111427] <d.m>  d.OUT : send value: 120 (0x78)
+[              111427] <k>  d.OUT: recv-wakeup value: 120 (0x78)   [by d.m]
+[              111447] <k>  d.OUT: recv-blocked
+[              116108] <d.m>  d.OUT : send value: 156 (0x9c)
+[              116108] <k>  d.OUT: recv-wakeup value: 156 (0x9c)   [by d.m]
+[              116128] <k>  d.OUT: recv-blocked
+[              120789] <d.m>  d.OUT : send value: 112 (0x70)
+[              120789] <k>  d.OUT: recv-wakeup value: 112 (0x70)   [by d.m]
+[              120809] <k>  d.OUT: recv-blocked
+[              125470] <d.m>  d.OUT : send value: 99 (0x63)
+[              125470] <k>  d.OUT: recv-wakeup value: 99 (0x63)   [by d.m]
+[              125490] <k>  d.OUT: recv-blocked
+[              130151] <d.m>  d.OUT : send value: 0 (0x0)
+[              130151] <k>  d.OUT: recv-wakeup value: 0 (0x0)   [by d.m]
+[              130171] <k>  d.OUT: recv-blocked
+[              134832] <d.m>  d.OUT : send value: 11 (0xb)
+[              134832] <k>  d.OUT: recv-wakeup value: 11 (0xb)   [by d.m]
+[              134852] <k>  d.OUT: recv-blocked
+[              139513] <d.m>  d.OUT : send value: 230 (0xe6)
+[              139513] <k>  d.OUT: recv-wakeup value: 230 (0xe6)   [by d.m]
+[              139533] <k>  d.OUT: recv-blocked
+Channel d.OUT: completed actions 30

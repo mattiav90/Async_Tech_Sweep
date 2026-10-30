@@ -1,0 +1,3 @@
+dflowmap -Tgeneric -s abc -ref=1 -f qdi -c bd -M 8 -p df_dut df_dut.act
+
+...

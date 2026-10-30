@@ -1,0 +1,25 @@
+import std;
+import "harness.act";
+
+import "cond_select.act";
+
+defproc dut (chan?(int<8>) A, B; chan?(int<1>) CTRL; chan!(int<9>) OUT)
+{
+  plain_adder<8> m(A, B, CTRL, OUT);
+}
+
+defproc tb ()
+{
+  chan(int<8>) a, b;
+  chan(int<1>) c;
+  chan(int<9>) o;
+  dut d;
+  d.A = a;
+  d.B = b;
+  d.CTRL = c;
+  d.OUT = o;
+  rand_src<8, 2463534242, 30> sa(a);
+  rand_src<8, 1013904223, 30> sb(b);
+  const_src<1, 1, 30> sc(c);
+  nsink<9> k(o);
+}

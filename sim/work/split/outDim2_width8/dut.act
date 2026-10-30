@@ -1,0 +1,24 @@
+import std;
+import "harness.act";
+
+import "split.act";
+
+defproc dut (chan?(int<8>) IN; chan?(int<1>) SEL; chan!(int<8>) OUT[2])
+{
+  split<8, 2> m(IN, SEL, OUT);
+}
+
+defproc tb ()
+{
+  chan(int<8>) a;
+  chan(int<1>) s;
+  chan(int<8>) o[2];
+  dut d;
+  d.IN = a;
+  d.SEL = s;
+  (i : 2 : d.OUT[i] = o[i];)
+  rand_src<8, 2463534242, 30> sa(a);
+  rand_mod<1, 2, 1013904223, 30> ss(s);
+  nsink<8> k[2];
+  (i : 2 : o[i] = k[i].I;)
+}

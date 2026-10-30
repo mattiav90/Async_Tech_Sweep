@@ -1,0 +1,108 @@
+// ============================================================================
+// harness.act -- test-bench-only processes
+// ----------------------------------------------------------------------------
+// Nothing in this file is ever placed INSIDE the `dut` wrapper, so synth2 never
+// decomposes it and actsim never charges its energy. These processes run as
+// plain (un-annotated) CHP, which costs ~20-60 ps per action -- negligible next
+// to a back-annotated DUT.
+//
+// Sources all stop after N tokens, which is what makes `cycle` terminate.
+// ============================================================================
+import std;
+
+// ----------------------------------------------------------------------------
+// rand_src: 32-bit xorshift PRNG, truncated to W bits. Emits N tokens.
+// SEED makes every instance produce a different stream, so a multiplier fed by
+// two rand_src does not end up computing a*a.
+// ----------------------------------------------------------------------------
+template <pint W; pint SEED; pint N>
+defproc rand_src (chan!(int<W>) O) {
+  int<32> s;
+  int<32> n;
+  chp {
+    s := SEED; n := 0;
+    *[ n < N ->
+         s := s ^ int(s << 13, 32);
+         s := s ^ (s >> 17);
+         s := s ^ int(s << 5, 32);
+         O!int(s, W);
+         n := n + 1
+    ]
+  }
+}
+
+// ----------------------------------------------------------------------------
+// rand_mod: same PRNG, but values bounded to [0, M). Used to drive the select /
+// destination ports of splits and merges.
+// ----------------------------------------------------------------------------
+template <pint W; pint M; pint SEED; pint N>
+defproc rand_mod (chan!(int<W>) O) {
+  int<32> s;
+  int<32> n;
+  chp {
+    s := SEED; n := 0;
+    *[ n < N ->
+         s := s ^ int(s << 13, 32);
+         s := s ^ (s >> 17);
+         s := s ^ int(s << 5, 32);
+         O!int((s >> 8) % M, W);
+         n := n + 1
+    ]
+  }
+}
+
+// ----------------------------------------------------------------------------
+// rot_fwd / rot_rev: the conflict-free rotation schedule for the DETERMINISTIC
+// crossbar. On round r, input i is routed to output (i+r) mod M, so output j
+// must select input (j-r) mod M. Both are permutations, so no two inputs ever
+// contend for the same output and the crossbar cannot deadlock without an
+// arbiter.
+//   rot_fwd<.., OFS=i, ..>  emits (i + r) mod M      -> drives split i
+//   rot_rev<.., OFS=j, ..>  emits (j - r) mod M      -> drives merge j
+// ----------------------------------------------------------------------------
+template <pint W; pint OFS; pint M; pint N>
+defproc rot_fwd (chan!(int<W>) O) {
+  int<32> r;
+  chp { r := 0; *[ r < N -> O!int((OFS + r) % M, W); r := r + 1 ] }
+}
+
+template <pint W; pint OFS; pint M; pint N>
+defproc rot_rev (chan!(int<W>) O) {
+  int<32> r;
+  chp { r := 0; *[ r < N -> O!int((OFS + M*N - r) % M, W); r := r + 1 ] }
+}
+
+// ----------------------------------------------------------------------------
+// pulse_src: 1 on every PERIOD-th token, 0 otherwise. Drives the mac's RST so
+// an accumulation runs PERIOD terms long -- the hardware itself has no loop, so
+// this is what sets the accumulation length.
+// ----------------------------------------------------------------------------
+template <pint PERIOD; pint N>
+defproc pulse_src (chan!(int<1>) O) {
+  int<32> r;
+  chp {
+    r := 0;
+    *[ r < N ->
+         [ r % PERIOD = 0 -> O!1
+         [] else          -> O!0
+         ];
+         r := r + 1
+    ]
+  }
+}
+
+// ----------------------------------------------------------------------------
+// const_src: the same value, N times. Used to pin a module's control input to
+// one branch so a selection can be measured always-taken vs never-taken.
+// ----------------------------------------------------------------------------
+template <pint W; pint VAL; pint N>
+defproc const_src (chan!(int<W>) O) {
+  int<32> n;
+  chp { n := 0; *[ n < N -> O!int(VAL, W); n := n + 1 ] }
+}
+
+// ----------------------------------------------------------------------------
+// nsink: drains a channel forever.
+// ----------------------------------------------------------------------------
+template <pint W>
+defproc nsink (chan?(int<W>) I) { int<W> v; chp { *[ I?v ] } }

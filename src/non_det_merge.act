@@ -1,1 +1,28 @@
-//this is a non deterministic merge
+// this is a non deterministic merge
+// ----------------------------------------------------------------------------
+// Arbitrated merge: the process PROBES (#IN[i]) all inDim inputs and serves
+// whichever is ready. Unlike det_merge it needs no SEL channel, but it pays for
+// the arbiter.
+//
+// This is deliberately the same CHP as SPACE's Non_Det_Merge_Single
+// (SPACE/src/Non_Det_Merge_Single.act), which is also what sits inside SPACE's
+// Tile_Switch -- so the numbers this sweep produces carry over to that design.
+// It is also the merge used on the output side of xbar_nd.
+//
+// Sweep knobs: width, inDim.
+// ----------------------------------------------------------------------------
+
+template <pint width; pint inDim> defproc non_det_merge(
+    chan?(int<width>) IN[inDim];
+    chan!(int<width>) OUT
+    ){
+        int<width> v;
+        chp{
+        *[
+            [|
+                ([] i : inDim : #IN[i] -> IN[i]?v )
+            |];
+            OUT!v
+        ]
+        }
+}

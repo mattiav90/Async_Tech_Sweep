@@ -1,0 +1,12 @@
+synth2 -Tgeneric -o dut_decomp.act -F decomp -t -p dut dut.act
+
+
+// cond_adder<8> : 
+// ----------- Process Runtimes ----------- 
+// Multichan + Loop Exc. : 306      microseconds
+// Projection            : 2        microseconds
+
+// ---------- Top-level Runtimes ---------- 
+// Total            : 1630646  microseconds
+// ACT Core Library : 1298141  microseconds
+// Synthesis Pass   : 331513   microseconds

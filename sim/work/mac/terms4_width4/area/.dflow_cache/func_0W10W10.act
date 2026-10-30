@@ -1,0 +1,62 @@
+/* -- declarations -- */
+export defproc func_0W10W10_logictmp (bool? x0_50_6; bool? x0_51_6; bool? x0_52_6; bool? x0_53_6; bool? x0_54_6; bool? x0_55_6; bool? x0_56_6; bool? x0_57_6; bool? x0_58_6; bool? x0_59_6; bool! out0_50_6; bool! out0_51_6; bool! out0_52_6; bool! out0_53_6; bool! out0_54_6; bool! out0_55_6; bool! out0_56_6; bool! out0_57_6; bool! out0_58_6; bool! out0_59_6);
+export defproc func_0W10W10_logic (bool? x0[10]; bool! out0[10]);
+
+export defproc func_0W10W10_logictmp (bool? x0_50_6; bool? x0_51_6; bool? x0_52_6; bool? x0_53_6; bool? x0_54_6; bool? x0_55_6; bool? x0_56_6; bool? x0_57_6; bool? x0_58_6; bool? x0_59_6; bool! out0_50_6; bool! out0_51_6; bool! out0_52_6; bool! out0_53_6; bool! out0_54_6; bool! out0_55_6; bool! out0_56_6; bool! out0_57_6; bool! out0_58_6; bool! out0_59_6)
+{
+  spec { hazard(*) }
+
+   /*--- types ---*/
+   syn::BUFX2 g2;
+   syn::BUFX2 g9;
+   syn::BUFX2 g0;
+   syn::BUFX2 g6;
+   syn::BUFX2 g8;
+   syn::BUFX2 g5;
+   syn::BUFX2 g3;
+   syn::BUFX2 g7;
+   syn::BUFX2 g4;
+   syn::BUFX2 g1;
+   /*--- connections ---*/
+   g0(.A=x0_50_6, .Y=out0_50_6);
+   g1(.A=x0_51_6, .Y=out0_51_6);
+   g2(.A=x0_52_6, .Y=out0_52_6);
+   g3(.A=x0_53_6, .Y=out0_53_6);
+   g4(.A=x0_54_6, .Y=out0_54_6);
+   g5(.A=x0_55_6, .Y=out0_55_6);
+   g6(.A=x0_56_6, .Y=out0_56_6);
+   g7(.A=x0_57_6, .Y=out0_57_6);
+   g8(.A=x0_58_6, .Y=out0_58_6);
+   g9(.A=x0_59_6, .Y=out0_59_6);
+}
+
+export defproc func_0W10W10_logic (bool? x0[10]; bool! out0[10])
+{
+  spec { hazard(*) }
+
+   /*--- types ---*/
+   bool x0_50_6;
+   bool x0_56_6;
+   bool out0_51_6;
+   bool x0_54_6;
+   func_0W10W10_logictmp _passthru_;
+   bool x0_53_6;
+   bool out0_55_6;
+   bool x0_58_6;
+   bool x0_55_6;
+   bool x0_51_6;
+   bool out0_56_6;
+   bool out0_54_6;
+   bool out0_59_6;
+   bool out0_58_6;
+   bool x0_59_6;
+   bool out0_50_6;
+   bool x0_57_6;
+   bool out0_53_6;
+   bool out0_57_6;
+   bool x0_52_6;
+   bool out0_52_6;
+   /*--- connections ---*/
+   _passthru_(.x0_50_6=x0[0], .x0_51_6=x0[1], .x0_52_6=x0[2], .x0_53_6=x0[3], .x0_54_6=x0[4], .x0_55_6=x0[5], .x0_56_6=x0[6], .x0_57_6=x0[7], .x0_58_6=x0[8], .x0_59_6=x0[9], .out0_50_6=out0[0], .out0_51_6=out0[1], .out0_52_6=out0[2], .out0_53_6=out0[3], .out0_54_6=out0[4], .out0_55_6=out0[5], .out0_56_6=out0[6], .out0_57_6=out0[7], .out0_58_6=out0[8], .out0_59_6=out0[9]);
+}
+

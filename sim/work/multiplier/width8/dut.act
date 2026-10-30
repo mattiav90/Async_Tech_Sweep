@@ -1,0 +1,22 @@
+import std;
+import "harness.act";
+
+import "multiplier.act";
+
+defproc dut (chan?(int<8>) A, B; chan!(int<16>) OUT)
+{
+  multiplier<8> m(A, B, OUT);
+}
+
+defproc tb ()
+{
+  chan(int<8>) a, b;
+  chan(int<16>) o;
+  dut d;
+  d.A = a;
+  d.B = b;
+  d.OUT = o;
+  rand_src<8, 2463534242, 30> sa(a);
+  rand_src<8, 1013904223, 30> sb(b);
+  nsink<16> k(o);
+}

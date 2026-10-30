@@ -1,0 +1,86 @@
+/* -- declarations -- */
+export defproc func_0W16W16_logictmp (bool? x0_50_6; bool? x0_51_6; bool? x0_52_6; bool? x0_53_6; bool? x0_54_6; bool? x0_55_6; bool? x0_56_6; bool? x0_57_6; bool? x0_58_6; bool? x0_59_6; bool? x0_510_6; bool? x0_511_6; bool? x0_512_6; bool? x0_513_6; bool? x0_514_6; bool? x0_515_6; bool! out0_50_6; bool! out0_51_6; bool! out0_52_6; bool! out0_53_6; bool! out0_54_6; bool! out0_55_6; bool! out0_56_6; bool! out0_57_6; bool! out0_58_6; bool! out0_59_6; bool! out0_510_6; bool! out0_511_6; bool! out0_512_6; bool! out0_513_6; bool! out0_514_6; bool! out0_515_6);
+export defproc func_0W16W16_logic (bool? x0[16]; bool! out0[16]);
+
+export defproc func_0W16W16_logictmp (bool? x0_50_6; bool? x0_51_6; bool? x0_52_6; bool? x0_53_6; bool? x0_54_6; bool? x0_55_6; bool? x0_56_6; bool? x0_57_6; bool? x0_58_6; bool? x0_59_6; bool? x0_510_6; bool? x0_511_6; bool? x0_512_6; bool? x0_513_6; bool? x0_514_6; bool? x0_515_6; bool! out0_50_6; bool! out0_51_6; bool! out0_52_6; bool! out0_53_6; bool! out0_54_6; bool! out0_55_6; bool! out0_56_6; bool! out0_57_6; bool! out0_58_6; bool! out0_59_6; bool! out0_510_6; bool! out0_511_6; bool! out0_512_6; bool! out0_513_6; bool! out0_514_6; bool! out0_515_6)
+{
+  spec { hazard(*) }
+
+   /*--- types ---*/
+   syn::BUFX2 g00;
+   syn::BUFX2 g10;
+   syn::BUFX2 g08;
+   syn::BUFX2 g14;
+   syn::BUFX2 g05;
+   syn::BUFX2 g04;
+   syn::BUFX2 g11;
+   syn::BUFX2 g03;
+   syn::BUFX2 g07;
+   syn::BUFX2 g02;
+   syn::BUFX2 g15;
+   syn::BUFX2 g09;
+   syn::BUFX2 g01;
+   syn::BUFX2 g13;
+   syn::BUFX2 g06;
+   syn::BUFX2 g12;
+   /*--- connections ---*/
+   g00(.A=x0_50_6, .Y=out0_50_6);
+   g01(.A=x0_51_6, .Y=out0_51_6);
+   g02(.A=x0_52_6, .Y=out0_52_6);
+   g03(.A=x0_53_6, .Y=out0_53_6);
+   g04(.A=x0_54_6, .Y=out0_54_6);
+   g05(.A=x0_55_6, .Y=out0_55_6);
+   g06(.A=x0_56_6, .Y=out0_56_6);
+   g07(.A=x0_57_6, .Y=out0_57_6);
+   g08(.A=x0_58_6, .Y=out0_58_6);
+   g09(.A=x0_59_6, .Y=out0_59_6);
+   g10(.A=x0_510_6, .Y=out0_510_6);
+   g11(.A=x0_511_6, .Y=out0_511_6);
+   g12(.A=x0_512_6, .Y=out0_512_6);
+   g13(.A=x0_513_6, .Y=out0_513_6);
+   g14(.A=x0_514_6, .Y=out0_514_6);
+   g15(.A=x0_515_6, .Y=out0_515_6);
+}
+
+export defproc func_0W16W16_logic (bool? x0[16]; bool! out0[16])
+{
+  spec { hazard(*) }
+
+   /*--- types ---*/
+   bool x0_50_6;
+   bool out0_510_6;
+   bool x0_56_6;
+   bool out0_51_6;
+   bool x0_54_6;
+   func_0W16W16_logictmp _passthru_;
+   bool x0_53_6;
+   bool x0_511_6;
+   bool x0_513_6;
+   bool out0_55_6;
+   bool x0_58_6;
+   bool x0_515_6;
+   bool x0_55_6;
+   bool x0_51_6;
+   bool out0_512_6;
+   bool out0_56_6;
+   bool out0_54_6;
+   bool out0_59_6;
+   bool x0_514_6;
+   bool out0_513_6;
+   bool x0_512_6;
+   bool out0_58_6;
+   bool x0_59_6;
+   bool out0_50_6;
+   bool x0_57_6;
+   bool out0_53_6;
+   bool x0_510_6;
+   bool out0_57_6;
+   bool x0_52_6;
+   bool out0_52_6;
+   bool out0_511_6;
+   bool out0_514_6;
+   bool out0_515_6;
+   /*--- connections ---*/
+   _passthru_(.x0_50_6=x0[0], .x0_51_6=x0[1], .x0_52_6=x0[2], .x0_53_6=x0[3], .x0_54_6=x0[4], .x0_55_6=x0[5], .x0_56_6=x0[6], .x0_57_6=x0[7], .x0_58_6=x0[8], .x0_59_6=x0[9], .x0_510_6=x0[10], .x0_511_6=x0[11], .x0_512_6=x0[12], .x0_513_6=x0[13], .x0_514_6=x0[14], .x0_515_6=x0[15], .out0_50_6=out0[0], .out0_51_6=out0[1], .out0_52_6=out0[2], .out0_53_6=out0[3], .out0_54_6=out0[4], .out0_55_6=out0[5], .out0_56_6=out0[6], .out0_57_6=out0[7], .out0_58_6=out0[8], .out0_59_6=out0[9], .out0_510_6=out0[10], .out0_511_6=out0[11], .out0_512_6=out0[12], .out0_513_6=out0[13], .out0_514_6=out0[14], .out0_515_6=out0[15]);
+}
+

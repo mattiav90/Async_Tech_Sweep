@@ -1,0 +1,23 @@
+// this is a split (demux / router stage)
+// ----------------------------------------------------------------------------
+// The dual of det_merge: one input, outDim outputs, an external SEL channel
+// picks the destination. This is the input stage of the crossbar.
+//
+// Sweep knobs: width, outDim.
+// ----------------------------------------------------------------------------
+import std;
+
+template <pint width; pint outDim> defproc split(
+    chan?(int<width>) IN;
+    chan?(int<std::ceil_log2(outDim)>) SEL;
+    chan!(int<width>) OUT[outDim]
+    ){
+        int<width> v;
+        int<std::ceil_log2(outDim)> s;
+        chp{
+        *[
+            IN?v, SEL?s;
+            [ ([] i : outDim : s = i -> OUT[i]!v ) ]
+        ]
+        }
+}

@@ -1,0 +1,3 @@
+module,tech,status,width,depth,terms,ports,inDim,outDim,variant,mode,inputs_per_source,ops,tokens,total_delay_ps,delay_per_op_ps,dynamic_energy_fJ,energy_per_op_fJ,leakage_power_W,leakage_energy_fJ,total_energy_fJ,area_um2,area_note,actsim_area,dflow_leak_power,synth_s,sim_s
+split,generic,OK,8,,,,,2,,,30,30,30,19069,635.6333333333333,0.0,0.0,0.0,0.0,0.0,413.0,,0.0,5.0,1.7,1.2
+split,generic,OK,8,,,,,4,,,30,30,30,18949,631.6333333333333,0.0,0.0,0.0,0.0,0.0,823.0,,0.0,7.0,1.6,1.0

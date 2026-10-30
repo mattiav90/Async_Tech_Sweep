@@ -1,0 +1,8 @@
+%read ./exprop_0.v; %blast; &put
+read_lib -v /Users/mv479/tools/ACT/actflow_build/act/syn/liberty/osu018_stdcells.lib
+read_constr ./exprop_0.sdc
+balance; rewrite -l; refactor -l; balance; rewrite -l; rewrite -lz; balance; refactor -lz; rewrite -lz; balance
+strash; ifraig; dc2; strash; &get -n; &dch -f; &nf; &put; upsize; dnsize
+stime -p
+write_verilog ./exprop_0_mapped.v
+print_io; print_gates

@@ -1,0 +1,45 @@
+import "df_dut_chplib.act";
+
+namespace globals {
+}
+
+namespace syn {
+}
+
+export defproc df_buf1_38_4 <: buf1<8> ()
+{
+/* instances */
+chan(int<1>) _ch_0_0;
+
+/* connections */
+
+refine {
+func_0W8W8 OUT_inst(IN, OUT);
+lib::sink<1> _ch_0_0_sink(_ch_0_0);
+}
+}
+
+export defproc df_buffer_38_74_4 <: buffer_38_74_4 ()
+{
+
+/* instances */
+
+/* connections */
+b[0].OUT=b[1].IN;
+b[1].OUT=b[2].IN;
+b[2].OUT=b[3].IN;
+OUT=b[3].OUT;
+IN=b[0].IN;
+}
+
+export defproc df_dut <: dut ()
+{
+
+/* instances */
+
+/* connections */
+OUT=m.OUT;
+IN=m.IN;
+}
+
+/* end of generation */

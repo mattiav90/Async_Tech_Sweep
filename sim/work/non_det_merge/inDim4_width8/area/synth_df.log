@@ -1,0 +1,8 @@
+synth2 -Tgeneric -o df_dut.act -F dataflow -p dut dut.act
+
+In expanding non_det_merge<8,4> (inst: m) (/Users/mv479/Yale/project/Async_Tech_Sweep/src/non_det_merge.act:15)
+In expanding dut<> (dut.act:6)
+In expanding non_det_merge<8,4> (inst: m) (/Users/mv479/Yale/project/Async_Tech_Sweep/src/non_det_merge.act:15)
+In expanding dut<> (dut.act:6)
+WARNING: Arbiter decomposition only supports two-way arbitration between probes.
+WARNING: Skipped dataflow generation for non_det_merge<8,4>; probes found.

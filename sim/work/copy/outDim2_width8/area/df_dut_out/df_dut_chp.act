@@ -1,0 +1,34 @@
+import "df_dut_chplib.act";
+
+namespace globals {
+}
+
+namespace syn {
+}
+
+export defproc df_copy_38_72_4 <: copy<8,2> ()
+{
+/* instances */
+chan(int<1>) _ch_0_0;
+
+/* connections */
+
+refine {
+lib::copy<8,2> INcopy(IN);
+func_0W8W8 OUT_0__inst(INcopy.out[0], OUT[0]);
+func_0W8W8 OUT_1__inst(INcopy.out[1], OUT[1]);
+lib::sink<1> _ch_0_0_sink(_ch_0_0);
+}
+}
+
+export defproc df_dut <: dut ()
+{
+
+/* instances */
+
+/* connections */
+OUT=m.OUT;
+IN=m.IN;
+}
+
+/* end of generation */

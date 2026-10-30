@@ -1,0 +1,27 @@
+// this is a buffer (slack chain)
+// ----------------------------------------------------------------------------
+// A chain of `depth` one-place buffers. The point of sweeping depth is that in
+// an asynchronous pipeline slack is not free: each stage adds energy and
+// forward latency but buys you pipelining. Energy should be linear in depth;
+// per-token throughput should flatten once the chain is deep enough.
+//
+// Sweep knobs: width, depth.
+// ----------------------------------------------------------------------------
+
+template <pint width> defproc buf1(
+    chan?(int<width>) IN;
+    chan!(int<width>) OUT
+    ){
+        int<width> v;
+        chp{ *[ IN?v; OUT!v ] }
+}
+
+template <pint width; pint depth> defproc buffer(
+    chan?(int<width>) IN;
+    chan!(int<width>) OUT
+    ){
+        buf1<width> b[depth];
+        IN = b[0].IN;
+        (i : depth-1 : b[i].OUT = b[i+1].IN;)
+        b[depth-1].OUT = OUT;
+}

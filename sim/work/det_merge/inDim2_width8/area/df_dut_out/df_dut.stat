@@ -1,0 +1,20 @@
+totalArea: 220.00, totalLeakPowewr: 4.00
+Merge area: 1.00, ratio:   0.5
+Split area: 0.00, ratio:   0.0
+Merge LeakPower: 1.00, ratio:  25.0
+Split LeakPower: 0.00, ratio:   0.0
+Area Statistics:
+totalArea: 220.00
+instance name      area     percentage     # of instances
+                                                                      func_0W8W8 193.00  87.7     1
+                                                              func_0i1ei1i0qW1W1 25.00  11.4     1
+                                                        lib::unpipe_merge<2,1,8>  1.00   0.5     1
+                                                                    lib::sink<1>  1.00   0.5     1
+
+Leak Power Statistics:
+totalLeakPower: 4.00
+                                                                      func_0W8W8   1.0  25.0     1
+                                                        lib::unpipe_merge<2,1,8>   1.0  25.0     1
+                                                              func_0i1ei1i0qW1W1   1.0  25.0     1
+                                                                    lib::sink<1>   1.0  25.0     1
+

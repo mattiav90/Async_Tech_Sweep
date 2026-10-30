@@ -1,0 +1,158 @@
+/* -- declarations -- */
+export defproc func_01pW8W8W9_logictmp (bool? x0_50_6; bool? x0_51_6; bool? x0_52_6; bool? x0_53_6; bool? x0_54_6; bool? x0_55_6; bool? x0_56_6; bool? x0_57_6; bool? x1_50_6; bool? x1_51_6; bool? x1_52_6; bool? x1_53_6; bool? x1_54_6; bool? x1_55_6; bool? x1_56_6; bool? x1_57_6; bool! out0_50_6; bool! out0_51_6; bool! out0_52_6; bool! out0_53_6; bool! out0_54_6; bool! out0_55_6; bool! out0_56_6; bool! out0_57_6; bool! out0_58_6);
+export defproc func_01pW8W8W9_logic (bool? x0[8]; bool? x1[8]; bool! out0[9]);
+
+export defproc func_01pW8W8W9_logictmp (bool? x0_50_6; bool? x0_51_6; bool? x0_52_6; bool? x0_53_6; bool? x0_54_6; bool? x0_55_6; bool? x0_56_6; bool? x0_57_6; bool? x1_50_6; bool? x1_51_6; bool? x1_52_6; bool? x1_53_6; bool? x1_54_6; bool? x1_55_6; bool? x1_56_6; bool? x1_57_6; bool! out0_50_6; bool! out0_51_6; bool! out0_52_6; bool! out0_53_6; bool! out0_54_6; bool! out0_55_6; bool! out0_56_6; bool! out0_57_6; bool! out0_58_6)
+{
+  spec { hazard(*) }
+
+   /*--- types ---*/
+   syn::NAND2X1 g00;
+   bool new_n52;
+   syn::NAND2X1 g10;
+   syn::AND2X1 g29;
+   bool new_n62;
+   bool new_n60;
+   syn::NAND2X1 g08;
+   bool new_n35;
+   syn::OR2X1 g31;
+   syn::NOR2X1 g14;
+   bool new_n30;
+   bool new_n63;
+   syn::XOR2X1 g26;
+   syn::NAND2X1 g30;
+   syn::AOI21X1 g23;
+   syn::NAND2X1 g35;
+   syn::XNOR2X1 g05;
+   bool new_n47;
+   bool new_n38;
+   syn::XNOR2X1 g38;
+   syn::OAI21X1 g17;
+   syn::XOR2X1 g04;
+   bool new_n46;
+   bool new_n39;
+   syn::XNOR2X1 g27;
+   bool new_n61;
+   bool new_n56;
+   bool new_n51;
+   syn::XNOR2X1 g11;
+   syn::NOR2X1 g03;
+   bool new_n41;
+   syn::AND2X1 g18;
+   syn::OAI21X1 g39;
+   syn::AND2X1 g07;
+   bool new_n45;
+   bool new_n26;
+   syn::NAND2X1 g02;
+   bool new_n40;
+   syn::NAND2X1 g19;
+   syn::OAI21X1 g28;
+   bool new_n32;
+   bool new_n55;
+   syn::XOR2X1 g15;
+   bool new_n28;
+   syn::NOR2X1 g25;
+   bool new_n29;
+   syn::OR2X1 g09;
+   bool new_n34;
+   bool new_n58;
+   syn::XNOR2X1 g16;
+   syn::XOR2X1 g01;
+   bool new_n43;
+   syn::NAND2X1 g32;
+   syn::NAND2X1 g24;
+   bool new_n50;
+   syn::XNOR2X1 g22;
+   syn::OR2X1 g20;
+   bool new_n33;
+   syn::AOI21X1 g34;
+   syn::XNOR2X1 g33;
+   syn::NOR2X1 g36;
+   syn::NAND2X1 g13;
+   syn::OAI21X1 g06;
+   bool new_n44;
+   bool new_n57;
+   bool new_n49;
+   bool new_n36;
+   syn::AOI21X1 g12;
+   bool new_n54;
+   syn::NAND2X1 g21;
+   syn::XOR2X1 g37;
+   /*--- connections ---*/
+   g00(.A=x0_50_6, .B=x1_50_6, .Y=new_n26);
+   g01(.A=x0_50_6, .B=x1_50_6, .Y=out0_50_6);
+   g02(.A=x0_51_6, .B=x1_51_6, .Y=new_n28);
+   g03(.A=x0_51_6, .B=x1_51_6, .Y=new_n29);
+   g04(.A=x0_51_6, .B=x1_51_6, .Y=new_n30);
+   g05(.A=new_n26, .B=new_n30, .Y=out0_51_6);
+   g06(.A=new_n26, .B=new_n29, .C=new_n28, .Y=new_n32);
+   g07(.A=x0_52_6, .B=x1_52_6, .Y=new_n33);
+   g08(.A=x0_52_6, .B=x1_52_6, .Y=new_n34);
+   g09(.A=x0_52_6, .B=x1_52_6, .Y=new_n35);
+   g10(.A=new_n34, .B=new_n35, .Y=new_n36);
+   g11(.A=new_n32, .B=new_n36, .Y=out0_52_6);
+   g12(.A=new_n32, .B=new_n35, .C=new_n33, .Y=new_n38);
+   g13(.A=x0_53_6, .B=x1_53_6, .Y=new_n39);
+   g14(.A=x0_53_6, .B=x1_53_6, .Y=new_n40);
+   g15(.A=x0_53_6, .B=x1_53_6, .Y=new_n41);
+   g16(.A=new_n38, .B=new_n41, .Y=out0_53_6);
+   g17(.A=new_n38, .B=new_n40, .C=new_n39, .Y=new_n43);
+   g18(.A=x0_54_6, .B=x1_54_6, .Y=new_n44);
+   g19(.A=x0_54_6, .B=x1_54_6, .Y=new_n45);
+   g20(.A=x0_54_6, .B=x1_54_6, .Y=new_n46);
+   g21(.A=new_n45, .B=new_n46, .Y=new_n47);
+   g22(.A=new_n43, .B=new_n47, .Y=out0_54_6);
+   g23(.A=new_n43, .B=new_n46, .C=new_n44, .Y=new_n49);
+   g24(.A=x0_55_6, .B=x1_55_6, .Y=new_n50);
+   g25(.A=x0_55_6, .B=x1_55_6, .Y=new_n51);
+   g26(.A=x0_55_6, .B=x1_55_6, .Y=new_n52);
+   g27(.A=new_n49, .B=new_n52, .Y=out0_55_6);
+   g28(.A=new_n49, .B=new_n51, .C=new_n50, .Y=new_n54);
+   g29(.A=x0_56_6, .B=x1_56_6, .Y=new_n55);
+   g30(.A=x0_56_6, .B=x1_56_6, .Y=new_n56);
+   g31(.A=x0_56_6, .B=x1_56_6, .Y=new_n57);
+   g32(.A=new_n56, .B=new_n57, .Y=new_n58);
+   g33(.A=new_n54, .B=new_n58, .Y=out0_56_6);
+   g34(.A=new_n54, .B=new_n57, .C=new_n55, .Y=new_n60);
+   g35(.A=x0_57_6, .B=x1_57_6, .Y=new_n61);
+   g36(.A=x0_57_6, .B=x1_57_6, .Y=new_n62);
+   g37(.A=x0_57_6, .B=x1_57_6, .Y=new_n63);
+   g38(.A=new_n60, .B=new_n63, .Y=out0_57_6);
+   g39(.A=new_n60, .B=new_n62, .C=new_n61, .Y=out0_58_6);
+}
+
+export defproc func_01pW8W8W9_logic (bool? x0[8]; bool? x1[8]; bool! out0[9])
+{
+  spec { hazard(*) }
+
+   /*--- types ---*/
+   bool x0_50_6;
+   bool x0_56_6;
+   bool out0_51_6;
+   bool x0_54_6;
+   bool x1_56_6;
+   func_01pW8W8W9_logictmp _passthru_;
+   bool x0_53_6;
+   bool out0_55_6;
+   bool x1_55_6;
+   bool x1_51_6;
+   bool x0_55_6;
+   bool x0_51_6;
+   bool x1_54_6;
+   bool out0_56_6;
+   bool out0_54_6;
+   bool x1_52_6;
+   bool out0_58_6;
+   bool out0_50_6;
+   bool x0_57_6;
+   bool out0_53_6;
+   bool x1_53_6;
+   bool out0_57_6;
+   bool x1_57_6;
+   bool x0_52_6;
+   bool out0_52_6;
+   bool x1_50_6;
+   /*--- connections ---*/
+   _passthru_(.x0_50_6=x0[0], .x0_51_6=x0[1], .x0_52_6=x0[2], .x0_53_6=x0[3], .x0_54_6=x0[4], .x0_55_6=x0[5], .x0_56_6=x0[6], .x0_57_6=x0[7], .x1_50_6=x1[0], .x1_51_6=x1[1], .x1_52_6=x1[2], .x1_53_6=x1[3], .x1_54_6=x1[4], .x1_55_6=x1[5], .x1_56_6=x1[6], .x1_57_6=x1[7], .out0_50_6=out0[0], .out0_51_6=out0[1], .out0_52_6=out0[2], .out0_53_6=out0[3], .out0_54_6=out0[4], .out0_55_6=out0[5], .out0_56_6=out0[6], .out0_57_6=out0[7], .out0_58_6=out0[8]);
+}
+

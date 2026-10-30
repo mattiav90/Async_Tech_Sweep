@@ -1,1 +1,13 @@
-//this is a multiplier
+// this is a multiplier
+// Sweep knob: width.
+
+template <pint width> defproc multiplier(
+    chan?(int<width>) A;
+    chan?(int<width>) B;
+    chan!(int<width*2>) OUT
+    ){
+        int<width> a, b;
+        chp{
+        *[A?a, B?b; OUT!a*b ]
+        }
+}

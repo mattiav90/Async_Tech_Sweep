@@ -1,0 +1,42 @@
+import "df_dut_chplib.act";
+
+namespace globals {
+}
+
+namespace syn {
+}
+
+export defproc df_det__merge_38_74_4 <: det_merge<8,4> ()
+{
+/* instances */
+chan(int<1>) _ch_0_2;
+chan(int<2>) _ch_0_0;
+chan(int<8>) _ch_0_1;
+
+/* connections */
+
+refine {
+func_0i3ei30i2ei20i1hi0e0i1I1i1eI0i0qBi1i0qqqW2W2 _ch_0_0_inst(SEL, _ch_0_0);
+chan(int<8>) _ch_0_1_in[4];
+_ch_0_1_in[0] = IN[0];
+_ch_0_1_in[1] = IN[1];
+_ch_0_1_in[2] = IN[2];
+_ch_0_1_in[3] = IN[3];
+lib::unpipe_merge<4,2,8> _ch_0_1_inst(_ch_0_0, _ch_0_1_in, _ch_0_1);
+func_0W8W8 OUT_inst(_ch_0_1, OUT);
+lib::sink<1> _ch_0_2_sink(_ch_0_2);
+}
+}
+
+export defproc df_dut <: dut ()
+{
+
+/* instances */
+
+/* connections */
+OUT=m.OUT;
+IN=m.IN;
+SEL=m.SEL;
+}
+
+/* end of generation */

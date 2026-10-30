@@ -1,1 +1,60 @@
-//this is a crossbar
+// this is a crossbar
+// ----------------------------------------------------------------------------
+// Two variants, built from the same split input stage but a different merge on
+// the output side. This is the "2 types" axis of the sweep:
+//
+//   xbar_det -- DETERMINISTIC. Output j is a det_merge driven by its own SEL
+//               channel. No arbiter anywhere. The test bench drives it with a
+//               rotation schedule (round r: input i -> output (i+r) mod N,
+//               output j takes input (j-r) mod N), which is a permutation, so
+//               no two inputs ever contend and the crossbar cannot deadlock.
+//               That schedule only exists for a SQUARE crossbar, so xbar_det
+//               takes a single N (ports = N x N).
+//
+//   xbar_nd  -- ARBITRATED. Output j is a non_det_merge that probes its inDim
+//               inputs. Destinations can be random and may collide; the arbiter
+//               sorts it out. Free to be rectangular (inDim x outDim).
+//
+// Sweep knobs: width, port count, and det-vs-probe.
+// ----------------------------------------------------------------------------
+import std;
+import "split.act";
+import "det_merge.act";
+import "non_det_merge.act";
+
+// --------------------------- deterministic, N x N ---------------------------
+template <pint width; pint N> defproc xbar_det(
+    chan?(int<width>) IN[N];
+    chan?(int<std::ceil_log2(N)>) DST[N];   // one per input  : where it goes
+    chan?(int<std::ceil_log2(N)>) SEL[N];   // one per output : who it takes
+    chan!(int<width>) OUT[N]
+    ){
+        split<width, N>     sp[N];
+        det_merge<width, N> mg[N];
+
+        (i : N :
+            IN[i]  = sp[i].IN;
+            DST[i] = sp[i].SEL;
+            SEL[i] = mg[i].SEL;
+            mg[i].OUT = OUT[i];
+            // sp[i] feeds slot i of every merge: that IS the crossbar
+            (j : N : sp[i].OUT[j] = mg[j].IN[i];)
+        )
+}
+
+// ------------------------ arbitrated, inDim x outDim ------------------------
+template <pint width; pint inDim; pint outDim> defproc xbar_nd(
+    chan?(int<width>) IN[inDim];
+    chan?(int<std::ceil_log2(outDim)>) DST[inDim];
+    chan!(int<width>) OUT[outDim]
+    ){
+        split<width, outDim>        sp[inDim];
+        non_det_merge<width, inDim> mg[outDim];
+
+        (i : inDim :
+            IN[i]  = sp[i].IN;
+            DST[i] = sp[i].SEL;
+            (j : outDim : sp[i].OUT[j] = mg[j].IN[i];)
+        )
+        (j : outDim : mg[j].OUT = OUT[j];)
+}

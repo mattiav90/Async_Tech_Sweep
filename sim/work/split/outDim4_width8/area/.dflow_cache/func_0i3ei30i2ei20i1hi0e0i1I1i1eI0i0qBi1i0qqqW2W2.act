@@ -1,0 +1,30 @@
+/* -- declarations -- */
+export defproc func_0i3ei30i2ei20i1hi0e0i1I1i1eI0i0qBi1i0qqqW2W2_logictmp (bool? x0_50_6; bool? x0_51_6; bool! out0_50_6; bool! out0_51_6);
+export defproc func_0i3ei30i2ei20i1hi0e0i1I1i1eI0i0qBi1i0qqqW2W2_logic (bool? x0[2]; bool! out0[2]);
+
+export defproc func_0i3ei30i2ei20i1hi0e0i1I1i1eI0i0qBi1i0qqqW2W2_logictmp (bool? x0_50_6; bool? x0_51_6; bool! out0_50_6; bool! out0_51_6)
+{
+  spec { hazard(*) }
+
+   /*--- types ---*/
+   syn::BUFX2 g0;
+   syn::BUFX2 g1;
+   /*--- connections ---*/
+   g0(.A=x0_50_6, .Y=out0_50_6);
+   g1(.A=x0_51_6, .Y=out0_51_6);
+}
+
+export defproc func_0i3ei30i2ei20i1hi0e0i1I1i1eI0i0qBi1i0qqqW2W2_logic (bool? x0[2]; bool! out0[2])
+{
+  spec { hazard(*) }
+
+   /*--- types ---*/
+   bool x0_50_6;
+   bool out0_51_6;
+   func_0i3ei30i2ei20i1hi0e0i1I1i1eI0i0qBi1i0qqqW2W2_logictmp _passthru_;
+   bool x0_51_6;
+   bool out0_50_6;
+   /*--- connections ---*/
+   _passthru_(.x0_50_6=x0[0], .x0_51_6=x0[1], .out0_50_6=out0[0], .out0_51_6=out0[1]);
+}
+

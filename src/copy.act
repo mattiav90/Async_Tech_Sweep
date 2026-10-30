@@ -1,0 +1,21 @@
+// this is a copy (fork)
+// ----------------------------------------------------------------------------
+// Broadcasts every input token to all outDim outputs. The sends are a comma
+// (parallel) composition, so the copy completes when the slowest consumer has
+// taken the token.
+//
+// Sweep knobs: width, outDim.
+// ----------------------------------------------------------------------------
+
+template <pint width; pint outDim> defproc copy(
+    chan?(int<width>) IN;
+    chan!(int<width>) OUT[outDim]
+    ){
+        int<width> v;
+        chp{
+        *[
+            IN?v;
+            (, i : outDim : OUT[i]!v )
+        ]
+        }
+}

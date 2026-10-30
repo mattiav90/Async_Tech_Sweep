@@ -1,0 +1,24 @@
+import std;
+import "harness.act";
+
+import "det_merge.act";
+
+defproc dut (chan?(int<8>) IN[4]; chan?(int<2>) SEL; chan!(int<8>) OUT)
+{
+  det_merge<8, 4> m(IN, SEL, OUT);
+}
+
+defproc tb ()
+{
+  chan(int<8>) a[4];
+  chan(int<2>) s;
+  chan(int<8>) o;
+  dut d;
+  (i : 4 : d.IN[i] = a[i];)
+  d.SEL = s;
+  d.OUT = o;
+  rand_src<8, 2463534242, 30> sa[4];
+  (i : 4 : sa[i].O = a[i];)
+  rot_fwd<2, 0, 4, 30> ss(s);
+  nsink<8> k(o);
+}

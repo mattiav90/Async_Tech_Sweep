@@ -1,0 +1,7 @@
+dflowmap -Tgeneric -s abc -ref=1 -f qdi -c bd -M 8 -p df_dut df_dut.act
+
+Parse error: Could not parse entire file.
+Expecting token `::', got `;'
+	File `df_dut.act', line: 33, col: 11.
+Exception: number=1, message -none-
+FATAL: Uncaught exception

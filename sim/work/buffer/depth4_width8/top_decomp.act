@@ -1,0 +1,11 @@
+import "dut_decomp.act";
+
+defproc tb_d ()
+{
+  chan(int<8>) a, o;
+  decomp_dut d;
+  d.IN = a;
+  d.OUT = o;
+  rand_src<8, 2463534242, 30> sa(a);
+  nsink<8> k(o);
+}
