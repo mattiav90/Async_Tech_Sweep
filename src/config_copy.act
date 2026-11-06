@@ -1,0 +1,32 @@
+// this is a statically CONFIGURED copy (gated multicast)
+// ----------------------------------------------------------------------------
+// Same shape as copy, but where copy broadcasts to everyone, this one only
+// sends to the outputs whose config BIT is set. The bits are plain bools set
+// once, not a channel, so the control path costs no handshake. The sends are a
+// comma, so it completes when the slowest ENABLED consumer has taken the token.
+//
+// Against copy, the slope difference is what the outDim guards cost: the guard
+// hardware is built for every output whether its bit is set or not.
+//
+// CONTRACT: cfg_out may be anything, including all zeros -- that just drops the
+// token, so the process degenerates into a sink.
+//
+// Sweep knobs: width, outDim, and how many bits the mask actually sets.
+// ----------------------------------------------------------------------------
+
+template <pint width; pint outDim> defproc config_copy(
+    chan?(int<width>) IN;
+    bool? cfg_out[outDim];
+    chan!(int<width>) OUT[outDim]
+    ){
+        int<width> v;
+        chp{
+        *[
+            IN?v;
+            (, i : outDim : [ cfg_out[i] -> OUT[i]!v
+                            [] else      -> skip
+                            ]
+            )
+        ]
+        }
+}

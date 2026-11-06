@@ -102,8 +102,8 @@ defproc const_src (chan!(int<W>) O) {
 }
 
 // ----------------------------------------------------------------------------
-// cfg_const: holds a static MASK on N config bits, then terminates. Bit i of
-// MASK drives b[i]. Used for cfg_merge / cfg_copy, whose selection is a bool
+// config_const: holds a static MASK on N config bits, then terminates. Bit i of
+// MASK drives b[i]. Used for config_merge / config_copy, whose selection is a
 // read in a guard rather than a value arriving on a channel, so something has
 // to drive those bools or they stay X and the guard never fires.
 // It sits outside `dut` like every other harness process, so configuring the
@@ -111,7 +111,7 @@ defproc const_src (chan!(int<W>) O) {
 // bits are written once and then they are just wires.
 // ----------------------------------------------------------------------------
 template <pint N; pint MASK>
-defproc cfg_const (bool! b[N]) {
+defproc config_const (bool! b[N]) {
   chp {
     (, i : N : [ ((MASK >> i) & 1) = 1 -> b[i]+
                [] else                 -> b[i]-

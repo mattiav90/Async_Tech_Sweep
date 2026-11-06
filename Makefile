@@ -31,7 +31,7 @@ VENV_OK   := $(VENV)/.installed
 
 # Technology config from $ACT_HOME/conf. Only the ones with a synth.conf can be
 # synthesized (`make help` lists them).
-TECH    ?= generic
+TECH    ?= tsmc65
 
 # Tokens each source sends, per parameter point. The CSV/plots report totals
 # divided by the operation count, i.e. the average cost of ONE operation; with
@@ -79,10 +79,26 @@ SYNTH_CONF     = int synth.expropt.skip_verification 1
 #    watches the outputs, runs, counts tokens and writes energy.txt.
 SIM            = actsim -ref=1 -Wlang_subst:off -cnf=decomp_sim.conf top_decomp.act tb_d
 
+# `time -f` and `timeout` are GNU coreutils. A stock macOS has neither (its
+# /usr/bin/time is the BSD one and rejects -f), and without this detection the
+# wrapper itself fails before the tool is even launched -- which looks exactly
+# like SYNTH_FAIL on every point. Detect both and degrade instead: no GNU time
+# means the synth_s / sim_s columns stay 0 (sweep.py reads a missing .time file
+# as 0.0), no timeout means tool runs are unbounded. The measured delay and
+# energy are unaffected either way -- they come from actsim, not from here.
+#   brew install coreutils gnu-time   gets both back on macOS.
+TIME_BIN := $(shell command -v gtime 2>/dev/null)
+ifeq ($(TIME_BIN),)
+  TIME_BIN := $(shell /usr/bin/time -f %e true >/dev/null 2>&1 && echo /usr/bin/time)
+endif
+TIMEOUT_BIN := $(shell command -v timeout 2>/dev/null || command -v gtimeout 2>/dev/null)
+
 # $(call run,<log>,<command>): run <command> under the timeout; its output goes
 # to <log> (headed by the command line) and its wall time to <log>.time.
-run = { echo '$(2)'; echo; /usr/bin/time -f %e -o $(basename $(1)).time \
-        timeout $(TIMEOUT) $(2); } > $(1) 2>&1
+run = { echo '$(2)'; echo; \
+        $(if $(TIME_BIN),$(TIME_BIN) -f %e -o $(basename $(1)).time) \
+        $(if $(TIMEOUT_BIN),$(TIMEOUT_BIN) $(TIMEOUT)) \
+        $(2); } > $(1) 2>&1
 
 # sim/work/adder/width8 -> adder/width8, for progress lines.
 point = $(patsubst $(WORK)/%,%,$*)
@@ -96,8 +112,12 @@ SEL = -n $(N) $(MODULE_ARG) $(if $(filter quick,$@),--quick)
 # For `make help` only (recursive `=`, so nothing runs unless help is asked for).
 HELP_TECHS   = $(shell for d in "$$ACT_HOME"/conf/*/; do \
                  [ -f "$$d/synth.conf" ] && basename "$$d"; done)
-HELP_MODULES = $(shell $(VENV_BASE) -c "import sys; sys.path.insert(0, 'scripts'); \
-                 import sweep; print(*sweep.MODULES)")
+# Prefer the venv interpreter: VENV_BASE may not even exist on this machine,
+# and an unreadable module list is worse than a slightly stale one.
+HELP_PY      = $(shell test -x $(PYTHON) && echo $(PYTHON) || command -v $(VENV_BASE) \
+                 || command -v python3)
+HELP_MODULES = $(shell $(HELP_PY) -c "import sys; sys.path.insert(0, 'scripts'); \
+                 import sweep; print(*sweep.MODULES)" 2>/dev/null)
 HELP_VAR     = printf "    \033[1;36m%-10s\033[0m %-22s %s\n"
 
 help: # Show this help
@@ -122,7 +142,8 @@ help: # Show this help
 	@echo ""
 	@echo "  Examples:"
 	@echo "    make quick TECH=generic"
-	@echo "    make sweep MODULE=adder"
+	@echo "    make sweep MODULE=adder              # one module only"
+	@echo "    make sweep MODULE=config_merge N=100    # one module, more tokens"
 	@echo "    make sim/work/adder/width8/sim.done     # rerun one point"
 	@echo ""
 
@@ -135,8 +156,8 @@ $(VENV_OK): requirements.txt
 
 venv: $(VENV_OK) # Create/update .venv from requirements.txt
 
-sweep: $(VENV_OK) # Full sweep of every module -> sim/csv/*.csv
-quick: $(VENV_OK) # Every curve, secondary axes pinned, to smoke-test the flow
+sweep: $(VENV_OK) # Full sweep -> sim/csv/*.csv  [MODULE=<name> for just one]
+quick: $(VENV_OK) # Every curve, secondary axes pinned  [MODULE=<name> too]
 sweep quick:
 	@$(PYTHON) scripts/sweep.py gen $(SEL)
 	@$(MAKE) --no-print-directory -k -j$(JOBS) points || true

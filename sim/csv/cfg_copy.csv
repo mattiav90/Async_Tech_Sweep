@@ -1,7 +1,0 @@
-module,tech,status,width,depth,ports,inDim,outDim,variant,mode,inputs_per_source,ops,tokens,total_delay_ps,delay_per_op_ps,dynamic_energy_fJ,energy_per_op_fJ,leakage_power_W,leakage_energy_fJ,total_energy_fJ,actsim_area,synth_backend,synth_s,sim_s
-cfg_copy,generic,SYNTH_FAIL,8,,,,2,,all,20,,,,,,,,,,,,0.0,
-cfg_copy,generic,SYNTH_FAIL,8,,,,4,,all,20,,,,,,,,,,,,0.0,
-cfg_copy,generic,SYNTH_FAIL,8,,,,6,,all,20,,,,,,,,,,,,0.0,
-cfg_copy,generic,SYNTH_FAIL,8,,,,8,,all,20,,,,,,,,,,,,0.0,
-cfg_copy,generic,SYNTH_FAIL,8,,,,12,,all,20,,,,,,,,,,,,0.0,
-cfg_copy,generic,SYNTH_FAIL,8,,,,16,,all,20,,,,,,,,,,,,0.0,

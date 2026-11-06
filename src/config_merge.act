@@ -1,0 +1,32 @@
+// this is a statically CONFIGURED merge
+// ----------------------------------------------------------------------------
+// Same shape as det_merge, but the selection is not driven by a SEL channel at
+// run time -- it is driven by config BITS that are set once (think FPGA-style
+// configuration SRAM, or a route programmed into a switch and then left alone).
+// The bits are plain bools, not channels, so there is no handshake on the
+// control path at all. Against det_merge that is the whole difference, and
+// against non_det_merge it is that plus the arbiter.
+//
+// CONTRACT: cfg_in must be ONE-HOT. It is NOT checked in hardware.
+//   Zero bits set -> the select has no true guard and the process deadlocks.
+//   Two bits set  -> two true guards in a deterministic [] select, which is an
+//                    error, not an arbitration. This is exactly the difference
+//                    from non_det_merge: that one probes and pays for an
+//                    arbiter, this one trusts the configuration.
+//
+// Sweep knobs: width, inDim.
+// ----------------------------------------------------------------------------
+
+template <pint width; pint inDim> defproc config_merge(
+    chan?(int<width>) IN[inDim];
+    bool? cfg_in[inDim];
+    chan!(int<width>) OUT
+    ){
+        int<width> v;
+        chp{
+        *[
+            [ ([] i : inDim : cfg_in[i] -> IN[i]?v ) ];
+            OUT!v
+        ]
+        }
+}

@@ -1,0 +1,36 @@
+// this is a statically CONFIGURED merge and copy, fused into one process
+// ----------------------------------------------------------------------------
+// config_merge's input stage and config_copy's output stage in a single CHP loop:
+// the input mask picks which input to read, the output mask picks which outputs
+// get the token, and one iteration does both. No SEL channels, no arbiter --
+// the whole route is held in config bits.
+//
+// The reason this exists separately from config_merge + config_copy wired together:
+// fusing them means ONE handshake sequence instead of two, with no channel in
+// between. The delta against the two separate modules at the same port count is
+// what that fusion actually buys.
+//
+// CONTRACT: as in the two halves -- cfg_in must be ONE-HOT (zero bits
+// deadlocks, two bits is an error in a deterministic select), cfg_out may be
+// anything.
+//
+// Sweep knobs: width, inDim, outDim.
+// ----------------------------------------------------------------------------
+
+template <pint width; pint inDim; pint outDim> defproc config_merge_copy(
+    chan?(int<width>) IN[inDim];
+    bool? cfg_in[inDim];
+    bool? cfg_out[outDim];
+    chan!(int<width>) OUT[outDim]
+    ){
+        int<width> v;
+        chp{
+        *[
+            [ ([] i : inDim : cfg_in[i] -> IN[i]?v ) ];
+            (, i : outDim : [ cfg_out[i] -> OUT[i]!v
+                            [] else      -> skip
+                            ]
+            )
+        ]
+        }
+}
