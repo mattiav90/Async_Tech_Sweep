@@ -1,0 +1,84 @@
+// this is the DETERMINISTIC crossbar
+// ----------------------------------------------------------------------------
+// split on the input side, det_merge on the output side -- no arbiter anywhere.
+// Output j is told which input to take by its own SEL channel.
+//
+// The test bench drives it with a rotation schedule: on round r input i goes to
+// output (i+r) mod N, so output j takes input (j-r) mod N. Both are
+// permutations, so no two inputs ever contend for the same output and the
+// crossbar cannot deadlock without an arbiter. That schedule only exists for a
+// SQUARE crossbar, which is why this one takes a single N. For a rectangular
+// one use xbar_nd, which arbitrates.
+//
+// Sweep knobs: width, ports.
+// ----------------------------------------------------------------------------
+import std;
+import "harness.act";
+import "split.act";
+import "det_merge.act";
+
+export
+template <pint width; pint N> defproc xbar_det(
+    chan?(int<width>) IN[N];
+    chan?(int<std::ceil_log2(N)>) DST[N];   // per input : where it goes
+    chan?(int<std::ceil_log2(N)>) SEL[N];   // per output: who it takes
+    chan!(int<width>) OUT[N]
+    ){
+        split<width, N>     sp[N];
+        det_merge<width, N> mg[N];
+
+        (i : N :
+            IN[i]  = sp[i].IN;
+            DST[i] = sp[i].SEL;
+            SEL[i] = mg[i].SEL;
+            mg[i].OUT = OUT[i];
+            // sp[i] feeds slot i of every merge: that IS the crossbar
+            (j : N : sp[i].OUT[j] = mg[j].IN[i];)
+        )
+}
+
+
+// ============================ TESTBENCH =====================================
+//@sweep TB_PORTS = 2, 4, 6, 8, 12, 16
+//@watch d.OUT[*TB_PORTS]
+//@ops   TB_N * TB_PORTS
+
+namespace tb_xbar_det {
+
+pint TB_WIDTH = 8;
+pint TB_PORTS = 4;
+pint TB_N     = 30;
+pint TB_SW    = std::ceil_log2(TB_PORTS);
+
+export
+defproc dut (chan?(int<TB_WIDTH>) IN[TB_PORTS];
+             chan?(int<TB_SW>) DST[TB_PORTS];
+             chan?(int<TB_SW>) SEL[TB_PORTS];
+             chan!(int<TB_WIDTH>) OUT[TB_PORTS])
+{
+  ::xbar_det<TB_WIDTH, TB_PORTS> m(IN, DST, SEL, OUT);
+}
+
+//@tb-begin
+export
+defproc tb ()
+{
+  chan(int<TB_WIDTH>) a[TB_PORTS];
+  chan(int<TB_SW>) ds[TB_PORTS];
+  chan(int<TB_SW>) sl[TB_PORTS];
+  chan(int<TB_WIDTH>) o[TB_PORTS];
+  dut d;                                           //@dut
+  (i : TB_PORTS : d.IN[i] = a[i];)
+  (i : TB_PORTS : d.DST[i] = ds[i];)
+  (i : TB_PORTS : d.SEL[i] = sl[i];)
+  (i : TB_PORTS : d.OUT[i] = o[i];)
+  ::rand_src<TB_WIDTH, 2463534242, TB_N> sa[TB_PORTS];
+  (i : TB_PORTS : sa[i].O = a[i];)
+  ::rot_fwd_all<TB_SW, TB_PORTS, TB_N> fw(ds);
+  ::rot_rev_all<TB_SW, TB_PORTS, TB_N> rv(sl);
+  ::nsink<TB_WIDTH> k[TB_PORTS];
+  (i : TB_PORTS : o[i] = k[i].I;)
+}
+//@tb-end
+
+} // namespace tb_xbar_det

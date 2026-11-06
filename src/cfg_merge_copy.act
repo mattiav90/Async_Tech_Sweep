@@ -1,0 +1,84 @@
+// this is a statically CONFIGURED merge / copy
+// ----------------------------------------------------------------------------
+// Same shape as det_merge / copy, but the selection is not driven by a SEL
+// channel at run time -- it is driven by config BITS that are set once (think
+// FPGA-style configuration SRAM, or a route programmed into a switch and then
+// left alone). The bits are plain bools, not channels, so there is no handshake
+// on the control path at all.
+//
+// Split into three processes so the sweep can price the two halves separately:
+//
+//   cfg_merge       inDim inputs -> 1 output. The input mask picks WHICH input
+//                   to read. Cost = the inDim-way guard on the input side.
+//   cfg_copy        1 input -> outDim outputs. The output mask picks WHICH
+//                   outputs get the token. Cost = outDim gated sends.
+//   cfg_merge_copy  both stages back to back, one token at a time. Compare
+//                   against cfg_merge + cfg_copy to see what, if anything,
+//                   fusing the two stages buys.
+//
+// CONTRACT on the masks (they are NOT checked in hardware):
+//   cfg_in  must be ONE-HOT. Zero bits set -> the select has no true guard and
+//           the process deadlocks. Two bits set -> two true guards in a
+//           deterministic [] select, which is an error, not an arbitration.
+//           This is exactly the difference from non_det_merge: that one probes
+//           and pays for an arbiter, this one trusts the configuration.
+//   cfg_out may be anything. All zeros means the token is simply dropped, so
+//           the process behaves as a sink.
+//
+// Sweep knobs: width, inDim, outDim, and the masks themselves.
+// ----------------------------------------------------------------------------
+
+// ------------------------- configured merge (mask in) -----------------------
+template <pint width; pint inDim> defproc cfg_merge(
+    chan?(int<width>) IN[inDim];
+    bool? cfg_in[inDim];
+    chan!(int<width>) OUT
+    ){
+        int<width> v;
+        chp{
+        *[
+            [ ([] i : inDim : cfg_in[i] -> IN[i]?v ) ];
+            OUT!v
+        ]
+        }
+}
+
+// ------------------------- configured copy (mask out) -----------------------
+// Unlike copy, which broadcasts to everyone, this one only sends to the
+// outputs whose bit is set. The sends are a comma, so it completes when the
+// slowest enabled consumer has taken the token.
+template <pint width; pint outDim> defproc cfg_copy(
+    chan?(int<width>) IN;
+    bool? cfg_out[outDim];
+    chan!(int<width>) OUT[outDim]
+    ){
+        int<width> v;
+        chp{
+        *[
+            IN?v;
+            (, i : outDim : [ cfg_out[i] -> OUT[i]!v
+                            [] else      -> skip
+                            ]
+            )
+        ]
+        }
+}
+
+// --------------------- both halves in one process ---------------------------
+template <pint width; pint inDim; pint outDim> defproc cfg_merge_copy(
+    chan?(int<width>) IN[inDim];
+    bool? cfg_in[inDim];
+    bool? cfg_out[outDim];
+    chan!(int<width>) OUT[outDim]
+    ){
+        int<width> v;
+        chp{
+        *[
+            [ ([] i : inDim : cfg_in[i] -> IN[i]?v ) ];
+            (, i : outDim : [ cfg_out[i] -> OUT[i]!v
+                            [] else      -> skip
+                            ]
+            )
+        ]
+        }
+}

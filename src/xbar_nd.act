@@ -1,0 +1,79 @@
+// this is the ARBITRATED (probed) crossbar
+// ----------------------------------------------------------------------------
+// split on the input side, non_det_merge on the output side. Each output merge
+// PROBES its inDim inputs and serves whichever is ready, so destinations can
+// collide freely and the arbiter sorts them out -- the same probe idiom as
+// SPACE's Non_Det_Merge_Single inside Tile_Switch.
+//
+// Because nothing has to be scheduled, this one is free to be rectangular.
+//
+// Sweep knobs: width, inDim, outDim.
+// ----------------------------------------------------------------------------
+import std;
+import "harness.act";
+import "split.act";
+import "non_det_merge.act";
+
+export
+template <pint width; pint inDim; pint outDim> defproc xbar_nd(
+    chan?(int<width>) IN[inDim];
+    chan?(int<std::ceil_log2(outDim)>) DST[inDim];
+    chan!(int<width>) OUT[outDim]
+    ){
+        split<width, outDim>        sp[inDim];
+        non_det_merge<width, inDim> mg[outDim];
+
+        (i : inDim :
+            IN[i]  = sp[i].IN;
+            DST[i] = sp[i].SEL;
+            (j : outDim : sp[i].OUT[j] = mg[j].IN[i];)
+        )
+        (j : outDim : mg[j].OUT = OUT[j];)
+}
+
+
+// ============================ TESTBENCH =====================================
+// rand_mod_all gives every input a DIFFERENT destination each round; if they
+// all asked for the same output there would be no contention to arbitrate.
+//
+//@sweep TB_IN  = 2, 4, 6, 8, 12, 16
+//@sweep TB_OUT = 2, 4, 8
+//@watch d.OUT[*TB_OUT]
+//@ops   TB_N * TB_IN
+
+namespace tb_xbar_nd {
+
+pint TB_WIDTH = 8;
+pint TB_IN    = 4;
+pint TB_OUT   = 4;
+pint TB_N     = 30;
+pint TB_SW    = std::ceil_log2(TB_OUT);
+
+export
+defproc dut (chan?(int<TB_WIDTH>) IN[TB_IN];
+             chan?(int<TB_SW>) DST[TB_IN];
+             chan!(int<TB_WIDTH>) OUT[TB_OUT])
+{
+  ::xbar_nd<TB_WIDTH, TB_IN, TB_OUT> m(IN, DST, OUT);
+}
+
+//@tb-begin
+export
+defproc tb ()
+{
+  chan(int<TB_WIDTH>) a[TB_IN];
+  chan(int<TB_SW>) ds[TB_IN];
+  chan(int<TB_WIDTH>) o[TB_OUT];
+  dut d;                                           //@dut
+  (i : TB_IN : d.IN[i] = a[i];)
+  (i : TB_IN : d.DST[i] = ds[i];)
+  (i : TB_OUT : d.OUT[i] = o[i];)
+  ::rand_src<TB_WIDTH, 2463534242, TB_N> sa[TB_IN];
+  (i : TB_IN : sa[i].O = a[i];)
+  ::rand_mod_all<TB_SW, TB_IN, TB_OUT, 1013904223, TB_N> dm(ds);
+  ::nsink<TB_WIDTH> k[TB_OUT];
+  (i : TB_OUT : o[i] = k[i].I;)
+}
+//@tb-end
+
+} // namespace tb_xbar_nd
