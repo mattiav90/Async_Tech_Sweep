@@ -51,7 +51,9 @@ PLOT_SPEC = {
     "buffer":        dict(x="depth"),
     "copy":          dict(x="outDim"),
     "split":         dict(x="outDim"),
-    # det_merge / non_det_merge have no plot of their own: they share merge.png.
+    # det_merge / non_det_merge / cfg_merge have no plot of their own: they
+    # share merge.png. cfg_copy / cfg_copy_one likewise share _compare_copy_cfg.
+    "cfg_merge_copy": dict(x="ports"),
     "xbar_det":      dict(x="ports", series="width"),
     "xbar_nd":       dict(x="ports", series="width"),
     "xbar_nd_io":    dict(x="outDim", series="inDim", facet="width"),
@@ -332,12 +334,25 @@ def main():
         sys.exit("no sim/csv/*.csv found -- run `make sweep` first")
 
     # --- the two comparisons worth making -----------------------------------
-    dm, ndm = load("det_merge"), load("non_det_merge")
+    dm, ndm, cm = load("det_merge"), load("non_det_merge"), load("cfg_merge")
     plot_compare(
         "merge",
-        "What arbitration costs: controlled merge vs probed merge",
-        [("det_merge (SEL-driven)", dm), ("non_det_merge (probes)", ndm)],
+        "What the control path costs: config bits vs SEL channel vs arbiter",
+        [("cfg_merge (config bits)", cm),
+         ("det_merge (SEL-driven)", dm),
+         ("non_det_merge (probes)", ndm)],
         "inDim", XLABEL["inDim"])
+
+    # Broadcast vs gated multicast, and gated-but-idle. cfg_copy_one builds all
+    # outDim guarded ports and uses one, so cfg_copy - cfg_copy_one is the cost
+    # of the extra sends and cfg_copy_one's slope is the cost of the guards.
+    plot_compare(
+        "_compare_copy_cfg",
+        "Broadcast vs configured multicast",
+        [("copy (broadcast)", load("copy")),
+         ("cfg_copy (all bits set)", load("cfg_copy")),
+         ("cfg_copy_one (one bit set)", load("cfg_copy_one"))],
+        "outDim", XLABEL["outDim"])
 
     # Both crossbars are square (ports = N x N), so they line up port-for-port.
     xd, xn = load("xbar_det"), load("xbar_nd")

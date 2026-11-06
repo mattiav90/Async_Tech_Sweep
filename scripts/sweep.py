@@ -233,6 +233,93 @@ def w_non_det_merge(p, n):
     )
 
 
+# ---------------------------------------------------------------------------
+# The statically configured merge / copy. Same shapes as det_merge and copy,
+# but the selection arrives as config BITS, not on a channel, so these curves
+# are the same hardware minus the run-time control path.
+#
+# cfg_in is one-hot (bit 0), so only IN[0] is ever read. The other sources are
+# still instantiated -- they block on their first send and stay blocked, which
+# costs nothing and keeps the bench identical to det_merge's.
+# ---------------------------------------------------------------------------
+
+def w_cfg_merge(p, n):
+    W, M = p["width"], p["inDim"]
+    return dict(
+        imports=["cfg_merge_copy.act"],
+        ports=f"chan?(int<{W}>) IN[{M}]; bool? cfg_in[{M}]; chan!(int<{W}>) OUT",
+        body=f"cfg_merge<{W}, {M}> m(IN, cfg_in, OUT);",
+        chans=[f"chan(int<{W}>) a[{M}];", f"bool ci[{M}];", f"chan(int<{W}>) o;"],
+        hookup=[f"(i : {M} : d.IN[i] = a[i];)",
+                f"(i : {M} : d.cfg_in[i] = ci[i];)", "d.OUT = o;"],
+        drivers=[
+            f"rand_src<{W}, 2463534242, {n}> sa[{M}];",
+            f"(i : {M} : sa[i].O = a[i];)",
+            f"cfg_const<{M}, 1> cf(ci);",          # one-hot: input 0
+            f"nsink<{W}> k(o);",
+        ],
+        watch=["d.OUT"],
+        ops=n,
+    )
+
+
+def w_cfg_copy(p, n):
+    """mode=all -> every output bit set (compare against `copy`);
+       mode=one -> a single bit set, so the outDim guards are all built but
+       only one send ever happens. all-vs-one separates the cost of HAVING
+       outDim gated ports from the cost of USING them."""
+    W, M = p["width"], p["outDim"]
+    allbits = p.get("mode", "all") == "all"
+    mask = (1 << M) - 1 if allbits else 1
+    return dict(
+        imports=["cfg_merge_copy.act"],
+        ports=f"chan?(int<{W}>) IN; bool? cfg_out[{M}]; chan!(int<{W}>) OUT[{M}]",
+        body=f"cfg_copy<{W}, {M}> m(IN, cfg_out, OUT);",
+        chans=[f"chan(int<{W}>) a;", f"bool co[{M}];", f"chan(int<{W}>) o[{M}];"],
+        hookup=["d.IN = a;", f"(i : {M} : d.cfg_out[i] = co[i];)",
+                f"(i : {M} : d.OUT[i] = o[i];)"],
+        drivers=[
+            f"rand_src<{W}, 2463534242, {n}> sa(a);",
+            f"cfg_const<{M}, {mask}> cf(co);",
+            f"nsink<{W}> k[{M}];",
+            f"(i : {M} : o[i] = k[i].I;)",
+        ],
+        # Only enabled outputs ever carry a token; a watched silent channel
+        # would make `tokens` look like a short run.
+        watch=[f"d.OUT[{j}]" for j in range(M if allbits else 1)],
+        ops=n,
+    )
+
+
+def w_cfg_merge_copy(p, n):
+    """Both halves fused, square (ports x ports), one-hot in / all-ones out.
+    Its delta against cfg_merge + cfg_copy at the same port count is what
+    fusing the two stages into one CHP loop actually buys."""
+    W, N = p["width"], p["ports"]
+    return dict(
+        imports=["cfg_merge_copy.act"],
+        ports=(f"chan?(int<{W}>) IN[{N}]; bool? cfg_in[{N}]; "
+               f"bool? cfg_out[{N}]; chan!(int<{W}>) OUT[{N}]"),
+        body=f"cfg_merge_copy<{W}, {N}, {N}> m(IN, cfg_in, cfg_out, OUT);",
+        chans=[f"chan(int<{W}>) a[{N}];", f"bool ci[{N}];", f"bool co[{N}];",
+               f"chan(int<{W}>) o[{N}];"],
+        hookup=[f"(i : {N} : d.IN[i] = a[i];)",
+                f"(i : {N} : d.cfg_in[i] = ci[i];)",
+                f"(i : {N} : d.cfg_out[i] = co[i];)",
+                f"(i : {N} : d.OUT[i] = o[i];)"],
+        drivers=[
+            f"rand_src<{W}, 2463534242, {n}> sa[{N}];",
+            f"(i : {N} : sa[i].O = a[i];)",
+            f"cfg_const<{N}, 1> cfi(ci);",             # one-hot: input 0
+            f"cfg_const<{N}, {(1 << N) - 1}> cfo(co);",  # broadcast to all
+            f"nsink<{W}> k[{N}];",
+            f"(i : {N} : o[i] = k[i].I;)",
+        ],
+        watch=[f"d.OUT[{j}]" for j in range(N)],
+        ops=n,
+    )
+
+
 def w_xbar_det(p, n):
     W, N = p["width"], p["ports"]
     SW = clog2(N)
@@ -345,6 +432,13 @@ MODULES = {
     "split":          dict(build=w_split,          points=grid(width=[8], outDim=[2, 4, 6, 8, 12, 16])),
     "det_merge":      dict(build=w_det_merge,      points=grid(width=[8], inDim=[2, 4, 6, 8, 12, 16])),
     "non_det_merge":  dict(build=w_non_det_merge,  points=grid(width=[8], inDim=[2, 4, 6, 8, 12, 16])),
+    # Statically configured merge / copy: same shapes, control path replaced by
+    # config bits. cfg_merge shares merge.png with the other two merges;
+    # cfg_copy (all bits) and cfg_copy_one (one bit) share the copy comparison.
+    "cfg_merge":      dict(build=w_cfg_merge,      points=grid(width=[8], inDim=[2, 4, 6, 8, 12, 16])),
+    "cfg_copy":       dict(build=w_cfg_copy,       points=grid(width=[8], outDim=[2, 4, 6, 8, 12, 16], mode=["all"])),
+    "cfg_copy_one":   dict(build=w_cfg_copy,       points=grid(width=[8], outDim=[2, 4, 6, 8, 12, 16], mode=["one"])),
+    "cfg_merge_copy": dict(build=w_cfg_merge_copy, points=grid(width=[8], ports=[2, 4, 6, 8, 12, 16])),
     # Selection overhead. `mode` pins cond_adder's CTRL so the a+b path is
     # taken always / never (skip) / half the time; plain_adder is the
     # no-selection baseline.
